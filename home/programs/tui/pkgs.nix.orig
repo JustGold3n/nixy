@@ -32,8 +32,11 @@
     imagemagick # Image manipulation tool
     chafa # Image to ANSI/Unicode converter and more.
     proton-vpn-cli
+<<<<<<< HEAD
     tmux
+=======
     pkgs-unstable.eilmeldung
+>>>>>>> upstream/main
 
     # Just cool
     #    tty-solitaire

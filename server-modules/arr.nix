@@ -1,7 +1,11 @@
 # *arr is a collection of media management applications.
 # See https://github.com/rasmus-kirk/nixarr
 # Setup guide: https://nixarr.com/wiki/setup/
-{config, ...}: let
+{
+  config,
+  pkgs-unstable,
+  ...
+}: let
   username = config.var.username;
 in {
   # Add my secrets
@@ -30,13 +34,17 @@ in {
     };
 
     jellyfin.enable = true;
-    jellyseerr.enable = true;
+    seerr = {
+      enable = true;
+      package = pkgs-unstable.seerr;
+    };
     prowlarr.enable = true;
     radarr.enable = true;
     sonarr.enable = true;
     bazarr.enable = true;
     transmission = {
       enable = true;
+      peerPort = 50000;
       extraSettings = {
         trash-original-torrent-files = true;
         rpc-whitelist-enabled = false;
