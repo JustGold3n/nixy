@@ -4,10 +4,8 @@
   services.hyprpaper = {
     enable = true;
     settings = {
-      preload = [",/home/gold3n/.config/nixos/hosts/laptop/wallpaper1.jpg"];
-      wallpaper = [",/home/gold3n/.config/nixos/hosts/laptop/wallpaper1.jpg"];
-      # ipc = "on";
-      # splash = false;
+      ipc = "on";
+      splash = false;
     };
   };
   systemd.user.services.hyprpaper.Unit.After = lib.mkForce "graphical-session.target";
