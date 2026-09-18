@@ -48,13 +48,17 @@
       url = "github:cachix/git-hooks.nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    oxicord = {
-      url = "github:linuxmobile/oxicord";
-    };
+    #    oxicord = {
+    #      url = "github:linuxmobile/oxicord";
+    #    };
 
     default-creds = {
       url = "github:anotherhadi/default-creds";
       flake = false;
+    };
+    clavis = {
+      url = "github:JustGold3n/clavis-shell";
+      flake = true;
     };
 
     # Server

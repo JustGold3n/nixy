@@ -24,11 +24,16 @@
     ../../home/programs/tui/nix-utils
     ../../home/programs/tui/spotatui
     ../../home/programs/tui/elio
-    # ../../home/programs/tui/wikiman
+    ../../home/programs/tui/wikiman
     ../../home/programs/tui/navi
     ../../home/programs/tui/pkgs.nix
-    #    ../../home/programs/tui/aerc
+<<<<<<< HEAD
+    # ../../home/programs/tui/aerc
     # ../../home/programs/tui/oxicord
+=======
+    ../../home/programs/tui/aerc
+    ../../home/programs/tui/oxicord
+>>>>>>> 62474b9 (Revert "wallpaper")
 
     ## GROUPS
     ../../home/programs/group/cybersecurity.nix
@@ -39,16 +44,19 @@
     # ../../home/system/hyprland
     # ../../home/system/waybar
     # ../../home/system/swaync
-    # ../../home/system/tofi
+    ../../home/system/clavis
+    ../../home/system/niri
+
+    #    ../../home/system/tofi
     ../../home/system/mime
     ../../home/system/udiskie
     ../../home/system/termfilechooser
     ../../home/system/clipboard
-    # ../../home/system/hypridle
+    ../../home/system/hypridle
 
     ./variables.nix # Mostly user-specific configuration
   ];
-
+  system.clavis.enable = true;
   home = {
     inherit (config.var) username;
     homeDirectory = "/home/" + config.var.username;

@@ -11,7 +11,8 @@
     ../../nixos/autologin.nix # Skip first TUIGreet login, use LUKS password to unlock the keyring
     ../../nixos/users.nix
     ../../nixos/utils.nix
-    ../../nixos/hyprland.nix
+    #../../nixos/hyprland.nix
+    ../../nixos/niri.nix
     ../../nixos/steam.nix
     ../../nixos/kernel-hardening.nix
     ../../nixos/yubikey.nix
