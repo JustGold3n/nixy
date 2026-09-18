@@ -15,6 +15,7 @@
     keepassxc # Password manager
     localsend
     mattermost-desktop
+    thunderbird
     # Backup
     # thunar
     #gnome-text-editor

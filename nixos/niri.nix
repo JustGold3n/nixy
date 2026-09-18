@@ -1,8 +1,7 @@
 # Hyprland is a dynamic tiling Wayland compositor.
 {...}: {
-  programs.hyprland = {
+  programs.niri = {
     enable = true;
-    withUWSM = true;
   };
 
   # Generic Wayland hints (Chromium/Electron and Firefox), applied on every
@@ -12,5 +11,5 @@
     MOZ_ENABLE_WAYLAND = "1";
   };
 
-  security.pam.services.hyprlock = {};
+  #security.pam.services.hyprlock = {};
 }

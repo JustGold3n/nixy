@@ -6,10 +6,9 @@
   ...
 }: {
   services.greetd.settings.initial_session = {
-    command = "${pkgs.uwsm}/bin/uwsm start -e -D Hyprland hyprland.desktop";
+    command = "${pkgs.niri}/bin/niri-session";
     user = config.var.username;
   };
-
   # Needed so the LUKS passphrase entered at boot is cached in the kernel
   # keyring, where pam_fde_boot_pw can retrieve it (see below).
   boot.initrd.systemd.enable = true;

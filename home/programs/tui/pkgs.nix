@@ -34,6 +34,7 @@
     proton-vpn-cli
     tmux
     pkgs-unstable.eilmeldung
+    aider-chat
 
     # Just cool
     #    tty-solitaire
