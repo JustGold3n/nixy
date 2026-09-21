@@ -48,9 +48,6 @@
       url = "github:cachix/git-hooks.nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    #    oxicord = {
-    #      url = "github:linuxmobile/oxicord";
-    #    };
 
     default-creds = {
       url = "github:anotherhadi/default-creds";
@@ -59,6 +56,8 @@
     clavis = {
       url = "github:JustGold3n/clavis-shell";
       flake = true;
+      # Align nixpkgs to prevent Qt/Wayland library mismatches
+      inputs.nixpkgs.follows = "nixpkgs-unstable";
     };
 
     # Server
@@ -77,7 +76,18 @@
       inherit system;
       config.allowUnfree = true;
     };
-    pkgs = nixpkgs.legacyPackages.${system};
+
+    # Initialize pkgs with an overlay to cleanly expose clavis-shell
+    pkgs = import nixpkgs {
+      inherit system;
+      config.allowUnfree = true;
+      overlays = [
+        (final: prev: {
+          clavis-shell = inputs.clavis.packages.${system}.default;
+        })
+      ];
+    };
+
     args = {
       inherit
         inputs
