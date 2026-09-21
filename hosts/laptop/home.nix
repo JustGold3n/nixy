@@ -40,6 +40,8 @@
     # ../../home/system/waybar
     # ../../home/system/swaync
     # ../../home/system/tofi
+    ../../home/system/niri
+    ../../home/system/clavis
     ../../home/system/mime
     ../../home/system/udiskie
     ../../home/system/termfilechooser
