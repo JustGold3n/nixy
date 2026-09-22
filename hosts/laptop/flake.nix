@@ -1,26 +1,25 @@
-{
+args @ {
   inputs,
   nixpkgs,
-  pkgs-unstable,
+  system,
+  clavisOverlay,
   ...
 }:
 nixpkgs.lib.nixosSystem {
+  inherit system;
+  specialArgs = {inherit inputs;};
   modules = [
     {
-      nixpkgs.overlays = [
-        inputs.nur.overlays.default
-      ];
-      _module.args = {inherit inputs pkgs-unstable;};
+      nixpkgs.overlays = [clavisOverlay];
     }
-    inputs.nixos-hardware.nixosModules.omen-16-n0005ne
-    inputs.home-manager.nixosModules.home-manager
-    inputs.stylix.nixosModules.stylix
-    inputs.sops-nix.nixosModules.sops
-    inputs.nix-index-database.nixosModules.default
-    inputs.helium-browser.nixosModules.default
-    inputs.impermanence.nixosModules.impermanence
-    inputs.disko.nixosModules.disko
-#    ./disko.nix
     ./configuration.nix
+    ../../nixos/niri.nix
+    inputs.home-manager.nixosModules.home-manager
+    {
+      home-manager.useGlobalPkgs = true;
+      home-manager.useUserPackages = true;
+      home-manager.extraSpecialArgs = {inherit inputs;};
+      home-manager.users.marek = import ./home.nix;
+    }
   ];
 }

@@ -53,11 +53,17 @@
       url = "github:anotherhadi/default-creds";
       flake = false;
     };
+
+    # Quickshell runtime toolkit needed to compile and run Clavis plugins
+    quickshell = {
+      url = "git+https://git.outfoxxed.me/outfoxxed/quickshell";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    # Non-flake source repository for the shell
     clavis = {
-      url = "github:JustGold3n/clavis-shell";
-      flake = true;
-      # Align nixpkgs to prevent Qt/Wayland library mismatches
-      inputs.nixpkgs.follows = "nixpkgs-unstable";
+      url = "github:StatIndet/quickshell";
+      flake = false;
     };
 
     # Server
@@ -72,20 +78,24 @@
     ...
   }: let
     system = "x86_64-linux";
+
+    # Overlay that builds clavis-shell from the raw source tree using Quickshell
+    clavisOverlay = final: prev: {
+      clavis-shell = final.callPackage ./home/system/clavis/package.nix {
+        src = inputs.clavis;
+        quickshell = inputs.quickshell.packages.${final.stdenv.hostPlatform.system}.default;
+      };
+    };
+
     pkgs-unstable = import nixpkgs-unstable {
       inherit system;
       config.allowUnfree = true;
     };
 
-    # Initialize pkgs with an overlay to cleanly expose clavis-shell
     pkgs = import nixpkgs {
       inherit system;
       config.allowUnfree = true;
-      overlays = [
-        (final: prev: {
-          clavis-shell = inputs.clavis.packages.${system}.default;
-        })
-      ];
+      overlays = [clavisOverlay];
     };
 
     args = {
@@ -95,30 +105,45 @@
         system
         pkgs-unstable
         pkgs
+        clavisOverlay
         ;
     };
+
     merge = nixpkgs.lib.foldl nixpkgs.lib.recursiveUpdate {};
     supportedSystems = ["x86_64-linux" "aarch64-linux"];
 
     forAllSystems = f:
       nixpkgs.lib.genAttrs supportedSystems
-      (system: f system (import nixpkgs {inherit system;}));
+      (sys:
+        f sys (import nixpkgs {
+          system = sys;
+          config.allowUnfree = true;
+          overlays = [clavisOverlay];
+        }));
   in
     merge [
       (import ./home/programs/tui/nixy/flake.nix args)
       {
         formatter.${system} = pkgs.alejandra;
-        packages.${system}.nvim = inputs.nvf-config.packages.${system}.nvim;
+
+        # Grouped dynamic attribute to prevent evaluation collisions
+        packages.${system} = {
+          nvim = inputs.nvf-config.packages.${system}.nvim;
+          clavis-shell = pkgs.clavis-shell;
+        };
+
         apps.${system}.nvim = inputs.nvf-config.apps.${system}.nvim;
+
         nixosConfigurations = {
           nixtop = import ./hosts/laptop/flake.nix args;
           g-work = import ./hosts/work/flake.nix args;
           rack = import ./hosts/server/flake.nix args;
         };
-        devShells = forAllSystems (system: pkgs: {
+
+        devShells = forAllSystems (sys: p: {
           default = import ./shell.nix {
-            inherit pkgs;
-            gitHooksLib = git-hooks.lib.${system};
+            pkgs = p;
+            gitHooksLib = git-hooks.lib.${sys};
           };
         });
       }

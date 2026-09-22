@@ -1,77 +1,63 @@
 {
   config,
   pkgs,
-  lib,
   ...
 }: {
-  # We bypass the missing Home Manager module and write the config directly to the XDG path
   xdg.configFile."niri/config.kdl".text = ''
-    input {
-        keyboard {
-            xkb {
-                layout "us,cz"
-            }
-        }
-        touchpad {
-            tap
-            natural-scroll
-        }
+    // Environment & daemons
+        spawn-at-startup "dbus-update-activation-environment" "--systemd" "WAYLAND_DISPLAY" "XDG_CURRENT_DESKTOP"
+        spawn-at-startup "systemctl" "--user" "import-environment" "WAYLAND_DISPLAY" "XDG_CURRENT_DESKTOP"
+        spawn-at-startup "systemctl" "--user" "restart" "clavis-shell.service"
+        spawn-at-startup "awww-daemon"    binds {
+        // Spotlight / App Launcher
+        Mod+Space       { spawn "clavis-shell" "ipc" "spotlight" "toggle"; }
+        Mod+D           { spawn "clavis-shell" "ipc" "spotlight" "toggle"; }
+
+        // Control Center & Dashboards
+        Mod+C           { spawn "clavis-shell" "ipc" "control-center" "toggle"; }
+        Mod+N           { spawn "clavis-shell" "ipc" "dashboard" "toggle"; }
+
+        // Session Lock
+        Mod+Alt+L       { spawn "clavis-shell" "ipc" "lock"; }
+
+        // Power Menu
+        Mod+Escape      { spawn "clavis-shell" "ipc" "power-menu" "toggle"; }
+
+        // Region Selection Screenshot
+        Print           { spawn "clavis-shell" "ipc" "region-select"; }
+        Mod+Shift+S     { spawn "clavis-shell" "ipc" "region-select"; }
+
+        // Volume
+        XF86AudioRaiseVolume allow-when-locked=true { spawn "wpctl" "set-volume" "-l" "1.5" "@DEFAULT_AUDIO_SINK@" "5%+"; }
+        XF86AudioLowerVolume allow-when-locked=true { spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "5%-"; }
+        XF86AudioMute        allow-when-locked=true { spawn "wpctl" "set-mute" "@DEFAULT_AUDIO_SINK@" "toggle"; }
+        XF86AudioMicMute     allow-when-locked=true { spawn "wpctl" "set-mute" "@DEFAULT_AUDIO_SOURCE@" "toggle"; }
+
+        // Brightness
+        XF86MonBrightnessUp   allow-when-locked=true { spawn "brightnessctl" "set" "5%+"; }
+        XF86MonBrightnessDown allow-when-locked=true { spawn "brightnessctl" "set" "5%-"; }
+
+        // Media Controls
+        XF86AudioPlay  allow-when-locked=true { spawn "playerctl" "play-pause"; }
+        XF86AudioNext  allow-when-locked=true { spawn "playerctl" "next"; }
+        XF86AudioPrev  allow-when-locked=true { spawn "playerctl" "previous"; }
     }
 
-    layout {
-        gaps 12
-        border {
-            width 2
-            active-color "#88c0d0"
-            inactive-color "#4c566a"
-        }
-        focus-ring {
-            off
-        }
+    window-rule {
+        match app-id=r#"^clavis.*"#
+        open-floating true
+        draw-border-with-background false
     }
 
-    spawn-at-startup "systemctl" "--user" "restart" "clavis-shell.service"
-    spawn-at-startup "${pkgs.polkit_gnome}/libexec/polkit-gnome-authentication-agent-1"
-
-    environment {
-        DISPLAY ":0"
-        NIXOS_OZONE_WL "1"
-        QT_QPA_PLATFORM "wayland"
-        MOZ_ENABLE_WAYLAND "1"
+    window-rule {
+        match app-id="clavis-region-selector"
+        open-floating true
+        default-floating-position center
+        draw-border-with-background false
     }
 
-    binds {
-        Mod+Return { spawn "ghostty"; }
-        Mod+D { spawn "tofi-drun"; }
-        Mod+Q { close-window; }
-
-        Mod+Left { focus-column-left; }
-        Mod+Right { focus-column-right; }
-        Mod+Up { focus-window-up; }
-        Mod+Down { focus-window-down; }
-
-        Mod+Shift+Left { move-column-left; }
-        Mod+Shift+Right { move-column-right; }
-        Mod+Shift+Up { move-window-up-or-to-workspace-up; }
-        Mod+Shift+Down { move-window-down-or-to-workspace-down; }
-
-        Mod+Shift+Ctrl+Left { focus-monitor-left; }
-        Mod+Shift+Ctrl+Right { focus-monitor-right; }
-
-        Mod+1 { focus-workspace 1; }
-        Mod+2 { focus-workspace 2; }
-        Mod+3 { focus-workspace 3; }
-        Mod+4 { focus-workspace 4; }
-        Mod+5 { focus-workspace 5; }
-
-        Mod+Shift+1 { move-column-to-workspace 1; }
-        Mod+Shift+2 { move-column-to-workspace 2; }
-        Mod+Shift+3 { move-column-to-workspace 3; }
-        Mod+Shift+4 { move-column-to-workspace 4; }
-        Mod+Shift+5 { move-column-to-workspace 5; }
-
-        Print { spawn "sh" "-c" "grim -g \"$(slurp)\""; }
-        Mod+Shift+E { quit; }
+    layer-rule {
+        match namespace="^clavis-.*"
     }
   '';
 }
