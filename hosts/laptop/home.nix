@@ -3,51 +3,18 @@
   inputs,
   lib,
   ...
-}: {
-  imports = [
-    # Programs
-
-    ## GUI
-    ../../home/programs/gui/proton
-    ../../home/programs/gui/helium
-    ../../home/programs/gui/pkgs.nix
-
-    ## TUI
-    inputs.nvf-config.homeManagerModules.default
-    ../../home/programs/tui/ghostty
-    ../../home/programs/tui/ilovetui
-    ../../home/programs/tui/shell
-    ../../home/programs/tui/git
-    ../../home/programs/tui/git/lazygit.nix
-    #../../home/programs/tui/git/signing.nix # CHANGEME: Change the key or remove this file
-    ../../home/programs/tui/nixy
-    ../../home/programs/tui/nix-utils
-    ../../home/programs/tui/spotatui
-    ../../home/programs/tui/elio
-    #../../home/programs/tui/wikiman
-    ../../home/programs/tui/navi
-    ../../home/programs/tui/pkgs.nix
-    ../../home/programs/tui/aerc
-    ../../home/programs/tui/oxicord
-
-    ## GROUPS
-    ../../home/programs/group/cybersecurity.nix
-    ../../home/programs/group/dev.nix
-
-    # System (Desktop environment like stuff)
-    ../../home/system/hyprlock
-    ../../home/system/hyprland
-    ../../home/system/waybar
-    ../../home/system/swaync
-    ../../home/system/tofi
-    ../../home/system/mime
-    ../../home/system/udiskie
-    ../../home/system/termfilechooser
-    ../../home/system/clipboard
-    ../../home/system/hypridle
-
-    ./variables.nix # Mostly user-specific configuration
-  ];
+}: let
+  utils = import ../../home/lib/utils.nix {inherit lib;};
+in {
+  imports =
+    utils.importAll ../../home/tui
+    ++ utils.importAll ../../home/gui
+    ++ utils.importAll ../../home/system # System (Desktop environment like stuff)
+    ++ [
+      inputs.nvf-config.homeManagerModules.default # My vim config
+      #../../home/tui/git/signing.nix # CHANGEME: Change the key or remove this file
+      ./variables.nix # Mostly user-specific configuration
+    ];
 
   home = {
     inherit (config.var) username;
@@ -61,6 +28,7 @@
         ".cache"
         ".steam"
         "Notes"
+        "Music"
         "Projects"
         "Documents"
         "Downloads"
@@ -74,17 +42,17 @@
       ];
     };
 
-    # sessionVariables = {
-    #   AQ_DRM_DEVICES = "/dev/dri/card2:/dev/dri/card1"; # CHANGEME: Related to the GPU
-    # };
+    sessionVariables = {
+      AQ_DRM_DEVICES = "/dev/dri/card2:/dev/dri/card1"; # CHANGEME: Related to the GPU
+    };
 
     # Don't touch this
     stateVersion = "26.05";
   };
 
   wayland.windowManager.hyprland.settings.monitor = [
-    "eDP-1,highres,0x0,1" # My internal laptop screen
-    #"desc:AOC U34G2G1 0x00000E06,3440x1440@99.98,auto,1" # My external monitor
+    "eDP-2,highres,0x0,1" # My internal laptop screen
+    "desc:AOC U34G2G1 0x00000E06,3440x1440@99.98,auto,1" # My external monitor
   ];
 
   programs = {

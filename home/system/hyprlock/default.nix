@@ -63,14 +63,27 @@
 in {
   stylix.targets.hyprlock.enable = false;
 
+  xdg.desktopEntries.lock = {
+    name = "Lock";
+    exec = "${pkgs.hyprlock}/bin/hyprlock";
+    icon = "system-lock-screen-symbolic";
+    comment = "Lock the screen";
+    categories = ["System"];
+    terminal = false;
+  };
+
   programs.hyprlock = {
     enable = true;
     settings = {
-      auth = {
-        fingerprint = {
-          enabled = true;
-        };
+      # Run fingerprint authentication alongside password authentication so
+      # either method can unlock the session without waiting for the other.
+      auth.fingerprint = {
+        enabled = true;
+        ready_message = "Scan fingerprint or enter password";
+        present_message = "Scanning fingerprint";
+        retry_delay = 250;
       };
+
       background = [
         {
           monitor = "";

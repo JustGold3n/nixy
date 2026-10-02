@@ -20,7 +20,8 @@ nixpkgs.lib.nixosSystem {
     inputs.helium-browser.nixosModules.default
     inputs.impermanence.nixosModules.impermanence
     inputs.disko.nixosModules.disko
-#    ./disko.nix
+    inputs.lanzaboote.nixosModules.lanzaboote
+    #    ./disko.nix
     ./configuration.nix
   ];
 }

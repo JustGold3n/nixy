@@ -1,8 +1,7 @@
 {
   # https://github.com/anotherhadi/nixy
   description = ''
-    Nixy simplifies and unifies the Hyprland ecosystem with a modular, easily customizable setup.
-    It provides a structured way to manage your system configuration and dotfiles with minimal effort.
+    Nixy simplifies and unifies the Hyprland ecosystem with a minimalist & easily customizable NixOS setup, heavily focused on TUIs.
   '';
 
   inputs = {
@@ -11,7 +10,7 @@
     nixos-hardware.url = "github:NixOS/nixos-hardware";
     nvf.url = "github:notashelf/nvf";
     nvf-config = {
-      url = "path:./home/programs/tui/nvf";
+      url = "path:./home/nvf";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.nvf.follows = "nvf";
     };
@@ -40,6 +39,10 @@
       url = "github:nix-community/disko";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    lanzaboote = {
+      url = "github:nix-community/lanzaboote";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     helium-browser = {
       url = "github:oxcl/nix-flake-helium-browser";
       inputs.nixpkgs.follows = "nixpkgs-unstable";
@@ -48,12 +51,12 @@
       url = "github:cachix/git-hooks.nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    oxicord = {
-      url = "github:linuxmobile/oxicord";
-    };
-
     default-creds = {
       url = "github:anotherhadi/default-creds";
+      flake = false;
+    };
+    tldr-pages-src = {
+      url = "github:tldr-pages/tldr";
       flake = false;
     };
 
@@ -91,15 +94,15 @@
       (system: f system (import nixpkgs {inherit system;}));
   in
     merge [
-      (import ./home/programs/tui/nixy/flake.nix args)
+      (import ./home/tui/nixy/flake.nix args)
       {
         formatter.${system} = pkgs.alejandra;
         packages.${system}.nvim = inputs.nvf-config.packages.${system}.nvim;
         apps.${system}.nvim = inputs.nvf-config.apps.${system}.nvim;
         nixosConfigurations = {
           nixtop = import ./hosts/laptop/flake.nix args;
-          g-work = import ./hosts/work/flake.nix args;
-          rack = import ./hosts/server/flake.nix args;
+          h-work = import ./hosts/work/flake.nix args;
+          jack = import ./hosts/server/flake.nix args;
         };
         devShells = forAllSystems (system: pkgs: {
           default = import ./shell.nix {

@@ -68,7 +68,12 @@ in {
       ];
     };
     gvfs.enable = true;
-    upower.enable = true;
+    upower = {
+      enable = true;
+      percentageLow = 10;
+      percentageCritical = 5;
+      percentageAction = 3;
+    };
     power-profiles-daemon.enable = true;
     udisks2.enable = true;
   };
@@ -78,8 +83,8 @@ in {
     variables = {
       PASSWORD_STORE_DIR = "$HOME/.local/share/password-store";
     };
-    # enable zsh autocompletion for system packages (systemd, etc)
-    pathsToLink = ["/share/zsh"];
+    # Enable Fish autocompletion for system packages (systemd, etc.).
+    pathsToLink = ["/share/fish"];
     systemPackages = with pkgs; [
       fd
       bc

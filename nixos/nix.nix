@@ -41,4 +41,17 @@ in {
       options = "--delete-older-than 7d";
     };
   };
+
+  # nix.channel.enable does not remove channel state created previously.
+  # Remove the disabled root channel links before NixOS checks for them.
+  system.activationScripts = {
+    removeLegacyNixChannels = {
+      deps = ["etc" "users"];
+      text = ''
+        rm -rf /root/.nix-defexpr/channels
+        rm -rf /nix/var/nix/profiles/per-user/root/channels
+      '';
+    };
+    no-nix-channel.deps = ["removeLegacyNixChannels"];
+  };
 }

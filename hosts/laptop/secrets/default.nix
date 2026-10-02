@@ -40,9 +40,6 @@ in {
       work-email-passwd = {
         owner = username;
       };
-      discord-token = {
-        owner = username;
-      };
     };
   };
 

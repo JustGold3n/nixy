@@ -21,6 +21,7 @@ in {
     ./bindings.nix
     ./polkitagent.nix
     ./hyprpaper.nix
+    ./scripts.nix
   ];
 
   home.packages =
@@ -147,6 +148,9 @@ in {
         "match:title run-bg, float on"
         "match:title run-bg, center on"
         "match:title run-bg, size 700 80"
+
+        "match:workspace special:scratch, opacity 1 1"
+        "match:workspace special:scratch, no_anim on"
       ];
 
       misc = {
@@ -158,9 +162,8 @@ in {
 
       input = {
         kb_layout = keyboardLayout;
-        kb_variant = ",qwerty";
 
-        kb_options = "caps:escape,grp:alt_shift_toggle";
+        kb_options = "caps:escape";
         follow_mouse = 1;
         sensitivity = 0.5;
         repeat_delay = 300;

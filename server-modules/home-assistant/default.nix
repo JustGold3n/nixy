@@ -13,7 +13,10 @@
   ];
 in {
   sops.secrets =
-    {signal_sender_number.owner = "hass";}
+    {
+      signal_sender_number.owner = "hass";
+      alarm_code.owner = "hass";
+    }
     // lib.genAttrs signalRecipients (_: {owner = "hass";});
 
   sops.templates."home-assistant-secrets.yaml" = {
@@ -22,6 +25,7 @@ in {
     restartUnits = ["home-assistant.service"];
     content =
       "signal_sender: \"${config.sops.placeholder.signal_sender_number}\"\n"
+      + "alarm_code: \"${config.sops.placeholder.alarm_code}\"\n"
       + lib.concatMapStrings (n: "${n}: \"${config.sops.placeholder.${n}}\"\n") signalRecipients;
   };
 
@@ -42,6 +46,7 @@ in {
       "manual"
       "meteo_france"
       "remote_calendar"
+      "systemmonitor"
     ];
     customComponents = plugins.customComponents;
     customLovelaceModules = plugins.customLovelaceModules;
@@ -55,6 +60,24 @@ in {
       automation = "!include automations.yaml";
       script = "!include scripts.yaml";
       frontend.themes = nixyTheme;
+      alarm_control_panel = [
+        {
+          platform = "manual";
+          name = "Home";
+          code = "!secret alarm_code";
+          code_arm_required = false;
+          armed_home = {
+            arming_time = 0;
+            delay_time = 0;
+            trigger_time = 120;
+          };
+          armed_away = {
+            arming_time = 30;
+            delay_time = 30;
+            trigger_time = 120;
+          };
+        }
+      ];
       notify =
         (map (n: {
             name = "signal_${n}";
@@ -89,6 +112,10 @@ in {
   };
 
   networking.firewall.allowedUDPPorts = [5353];
+  # Sonos event subscriptions (callbacks from speakers to HA)
+  networking.firewall.allowedTCPPorts = [1400];
 
-  services.cloudflared.tunnels."${config.var.tunnelId}".ingress."hass.${config.var.domain}" = "http://localhost:${toString config.services.home-assistant.config.http.server_port}";
+  services.cloudflared.tunnels."${config.var.tunnelId}".ingress = {
+    "hass.${config.var.domain}" = "http://localhost:${toString config.services.home-assistant.config.http.server_port}";
+  };
 }

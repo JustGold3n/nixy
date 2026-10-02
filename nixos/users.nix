@@ -6,9 +6,9 @@
 }: let
   username = config.var.username;
 in {
-  programs.zsh.enable = true;
+  programs.fish.enable = true;
   users = {
-    defaultUserShell = pkgs.zsh;
+    defaultUserShell = pkgs.fish;
 
     users.${username} = {
       isNormalUser = true;

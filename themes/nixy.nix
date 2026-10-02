@@ -11,11 +11,11 @@
       bar-height = 36;
       gaps-in = 8;
       gaps-out = 8 * 2;
-      active-opacity = 0.96;
-      inactive-opacity = 0.92;
-      blur = false;
+      active-opacity = 0.9;
+      inactive-opacity = 0.8;
+      blur = true;
       border-size = 2;
-      animation-speed = "very-fast"; # "very-fast" | "fast" | "medium" | "slow"
+      animation-speed = "fast"; # "very-fast" | "fast" | "medium" | "slow"
     };
     description = "Theme configuration options";
   };

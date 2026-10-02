@@ -46,69 +46,6 @@ in {
 
     bind =
       [
-        # Applications
-        (
-          "$shiftMod, A, exec, "
-          + lib.getExe (mkMenu [
-            {
-              key = "a";
-              desc = "Proton Authenticator";
-              cmd = "env WEBKIT_DISABLE_COMPOSITING_MODE=1 ${pkgs.proton-authenticator}/bin/proton-authenticator";
-            }
-            {
-              key = "p";
-              desc = "KeePassXC";
-              cmd = "${pkgs.keepassxc}/bin/keepassxc";
-            }
-            {
-              key = "v";
-              desc = "Proton VPN";
-              cmd = "${pkgs.proton-vpn}/bin/protonvpn-app";
-            }
-            {
-              key = "c";
-              desc = "Proton Calendar";
-              cmd = "${config.programs.helium.package}/bin/helium 'https://calendar.proton.me/'";
-            }
-            {
-              key = "m";
-              desc = "Mail Aerc";
-              cmd = "${pkgs.ghostty}/bin/ghostty +new-window -e aerc";
-            }
-            {
-              key = "d";
-              desc = "Discord";
-              cmd = "${pkgs.ghostty}/bin/ghostty +new-window -e tmux attach -t oxicord";
-            }
-
-            {
-              key = "o";
-              desc = "Obsidian";
-              cmd = "${pkgs.obsidian}/bin/obsidian";
-            }
-            {
-              key = "s";
-              desc = "Signal";
-              cmd = "${pkgs.signal-desktop}/bin/signal-desktop";
-            }
-            {
-              key = "b";
-              desc = "TickTick";
-              cmd = "${pkgs.ticktick}/bin/ticktick";
-            }
-            {
-              key = "t";
-              desc = "Helium";
-              cmd = "${config.programs.helium.package}/bin/helium";
-            }
-            {
-              key = "i";
-              desc = "Helium (Incognito)";
-              cmd = "${config.programs.helium.package}/bin/helium --incognito";
-            }
-          ])
-        )
-
         "$mod,T, exec, uwsm app -- ${config.programs.helium.package}/bin/helium" # Browser
 
         # Power
@@ -118,29 +55,29 @@ in {
             {
               key = "l";
               desc = "Lock";
-              cmd = "${pkgs.hyprlock}/bin/hyprlock";
+              cmd = config.xdg.desktopEntries.lock.exec;
             }
             {
               key = "s";
               desc = "Suspend";
-              cmd = "systemctl suspend";
+              cmd = config.xdg.desktopEntries.suspend.exec;
             }
             {
               key = "r";
               desc = "Reboot";
-              cmd = "systemctl reboot";
+              cmd = config.xdg.desktopEntries.reboot.exec;
             }
             {
               key = "p";
               desc = "Power Off";
-              cmd = "systemctl poweroff";
+              cmd = config.xdg.desktopEntries.shutdown.exec;
             }
           ])
         )
 
         # Quick launch
-        "$mod, RETURN, exec, ${pkgs.ghostty}/bin/ghostty +new-window" # Ghostty (terminal, via daemon D-Bus)
-        "$mod, E, exec, ${pkgs.ghostty}/bin/ghostty +new-window -e elio" # Elio
+        "$mod,RETURN, exec, ${pkgs.ghostty}/bin/ghostty +new-window" # Ghostty (terminal, via daemon D-Bus)
+        "$mod,E, exec, ${pkgs.ghostty}/bin/ghostty +new-window -e elio" # Elio
         "$mod, D, exec, ${lib.getExe tofi-drun-toggle}" # Launcher (toggle)
         "$mod, N, exec, ${pkgs.swaynotificationcenter}/bin/swaync-client -t" # Notification center
 
@@ -148,7 +85,7 @@ in {
         "$mod,Q, killactive," # Close window
         "$mod,F, fullscreen" # Toggle Fullscreen
         "$shiftMod,F, togglefloating," # Toggle Floating
-        "$shiftMod, SPACE, exec, ${scripts.focus-toggle}/bin/focus-toggle" # Toggle focus mode
+        "$shiftMod,D, exec, ${scripts.focus-toggle}/bin/focus-toggle" # Toggle focus mode
 
         # Focus Windows
         "$mod,H, movefocus, l" # Move focus left
@@ -165,8 +102,8 @@ in {
         "$shiftMod, S, movetoworkspace, special:scratch" # Move to scratch workspace
 
         # Utilities
-        ", Print, exec, ${pkgs.hyprshot}/bin/hyprshot -m region" # Capture region
-        "$shiftMod, Print, exec, ${pkgs.hyprshot}/bin/hyprshot -m output" # Capture screen
+        ", Print, exec, ${config.xdg.desktopEntries.screenshot-region.exec}" # Capture region
+        "$shiftMod, Print, exec, ${config.xdg.desktopEntries.screenshot-screen.exec}" # Capture screen
       ]
       ++ (builtins.concatLists (
         builtins.genList (
