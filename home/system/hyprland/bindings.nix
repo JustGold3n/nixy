@@ -47,6 +47,7 @@ in {
     bind =
       [
         "$mod,T, exec, uwsm app -- ${config.programs.helium.package}/bin/helium" # Browser
+        "$mod,B, exec, uwsm app -- ${config.programs.helium.package}/bin/helium" # Browser
 
         # Power
         (

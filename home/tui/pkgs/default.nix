@@ -30,13 +30,13 @@
     codex
     pkgs-unstable.graphify
     # Just cool
-    #tty-solitaire
-    #bastet
-    #peaclock
-    #cbonsai
-    #pipes
-    #cmatrix
-    #fastfetch
-    #smassh # typing test, 10fastfinger like
+    tty-solitaire
+    bastet
+    peaclock
+    cbonsai
+    pipes
+    cmatrix
+    fastfetch
+    smassh # typing test, 10fastfinger like
   ];
 }

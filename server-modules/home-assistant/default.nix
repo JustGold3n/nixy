@@ -11,6 +11,11 @@
     "h"
     "d"
   ];
+
+  motionRooms = [
+    "toilet"
+    "entry"
+  ];
 in {
   sops.secrets =
     {
@@ -41,12 +46,14 @@ in {
       "matter"
       "thread"
       "sonos"
+      "spotify"
       "apple_tv"
       "signal_messenger"
       "manual"
       "meteo_france"
       "remote_calendar"
       "systemmonitor"
+      "uptime_kuma"
     ];
     customComponents = plugins.customComponents;
     customLovelaceModules = plugins.customLovelaceModules;
@@ -59,7 +66,86 @@ in {
       scene = "!include scenes.yaml";
       automation = "!include automations.yaml";
       script = "!include scripts.yaml";
-      frontend.themes = nixyTheme;
+      frontend = {
+        themes = nixyTheme;
+        # Load card-mod early so it can style every card
+        extra_module_url = ["/local/nixos-lovelace-modules/card-mod.js"];
+      };
+      # Timestamp of the last motion detection (trigger-based, survives restarts)
+      template =
+        map (room: {
+          trigger = [
+            {
+              trigger = "state";
+              entity_id = "binary_sensor.${room}_motion";
+              to = "on";
+            }
+          ];
+          sensor = [
+            {
+              name = "${room} last motion";
+              unique_id = "${room}_last_motion";
+              device_class = "timestamp";
+              icon = "mdi:motion-sensor";
+              state = "{{ now().isoformat() }}";
+            }
+          ];
+        })
+        motionRooms
+        ++ [
+          # Uptime Kuma monitors that are not up (down, pending or maintenance)
+          {
+            sensor = [
+              {
+                name = "Websites not up";
+                unique_id = "websites_not_up";
+                icon = "mdi:web-off";
+                state = ''
+                  {{ integration_entities('uptime_kuma')
+                     | select('match', 'sensor\.')
+                     | select('is_state', ['down', 'pending', 'maintenance'])
+                     | list | count }}
+                '';
+                attributes.sites = ''
+                  {{ integration_entities('uptime_kuma')
+                     | select('match', 'sensor\.')
+                     | select('is_state', ['down', 'pending', 'maintenance'])
+                     | map('device_attr', 'name')
+                     | list }}
+                '';
+              }
+            ];
+          }
+          # Battery sensors below 15%
+          {
+            sensor = [
+              {
+                name = "Batteries to replace";
+                unique_id = "batteries_to_replace";
+                icon = "mdi:battery-alert-variant-outline";
+                state = ''
+                  {{ states.sensor
+                     | selectattr('attributes.device_class', 'defined')
+                     | selectattr('attributes.device_class', 'eq', 'battery')
+                     | map(attribute='state')
+                     | select('is_number') | map('float')
+                     | select('lt', 15)
+                     | list | count }}
+                '';
+                attributes.devices = ''
+                  {% set ns = namespace(low=[]) %}
+                  {% for s in states.sensor
+                       | selectattr('attributes.device_class', 'defined')
+                       | selectattr('attributes.device_class', 'eq', 'battery')
+                       if is_number(s.state) and s.state | float < 15 %}
+                    {% set ns.low = ns.low + [s.name ~ ' (' ~ s.state | int ~ '%)'] %}
+                  {% endfor %}
+                  {{ ns.low }}
+                '';
+              }
+            ];
+          }
+        ];
       alarm_control_panel = [
         {
           platform = "manual";
