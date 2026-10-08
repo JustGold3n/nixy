@@ -28,7 +28,7 @@
     pkgs-unstable.yt-dlp
 
     codex
-
+    pkgs-unstable.graphify
     # Just cool
     #tty-solitaire
     #bastet

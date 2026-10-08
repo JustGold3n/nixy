@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+graphify_launcher="$(command -v graphify)"
+graphify_wrapped="$(sed -n 's/^exec -a .* "\([^"]*\.graphify-wrapped\)".*/\1/p' "$graphify_launcher")"
+python_bin="$(head -1 "$graphify_wrapped" | sed 's/^#!//')"
+python_path="$(sed -n "s/.*\['\(.*\)'\], site\._init_pathinfo()).*/\1/p" "$graphify_wrapped" | sed "s/','/:/g")"
+
+export PYTHONPATH="$python_path"
+exec "$python_bin" "$@"

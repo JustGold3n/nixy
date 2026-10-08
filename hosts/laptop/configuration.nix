@@ -71,23 +71,14 @@
       "root"
     ];
     rules = ''
-      allow id 13fd:5900 name "External"
-      allow id 1d6b:0003 name "xHCI Host Controller"
-      allow id 1d6b:0002 name "xHCI Host Controller"
-      allow id 0bda:c85c name "Bluetooth Radio"
-      allow id 8086:0b63 name "USB Bridge"
-      allow id 27c6:63bc serial "UIDE0267113_XXXX_MOC_B0" name "Goodix Fingerprint USB Device"
-      allow id 30c9:009f name "HP True Vision FHD Camera"
-      allow id 03f0:036b name "HP USB-C Dock G5"
-      allow id 03f0:066b name "HP USB-C Dock G5"
-      allow id 03f0:056b name "USB Audio"
-      allow id 0bda:8153 name "USB 10/100/1000 LAN"
-      allow id 046d:0ab7 name "Blue Microphones"
-      allow id 03f0:076b name "USB5734"
-      allow id 1532:02a1 name "Razer Ornata V3"
-      allow id 03f0:046b name "HP USB-C Dock G5"
-      allow id 03f0:086b name "USB2734"
-      allow id 1b1c:1b75 name "CORSAIR HARPOON RGB PRO Gaming Mouse"
+      allow id 1d6b:0002 serial "0000:00:0d.0" name "xHCI Host Controller" hash "d3YN7OD60Ggqc9hClW0/al6tlFEshidDnQKzZRRk410=" parent-hash "Y1kBdG1uWQr5CjULQs7uh2F6pHgFb6VDHcWLk83v+tE=" with-interface 09:00:00 with-connect-type ""
+      allow id 1d6b:0003 serial "0000:00:0d.0" name "xHCI Host Controller" hash "G+G3Mro8zBWJavFOAQUtoNiOsZSfBCt2XqHfOufYFis=" parent-hash "Y1kBdG1uWQr5CjULQs7uh2F6pHgFb6VDHcWLk83v+tE=" with-interface 09:00:00 with-connect-type ""
+      allow id 1d6b:0002 serial "0000:00:14.0" name "xHCI Host Controller" hash "jEP/6WzviqdJ5VSeTUY8PatCNBKeaREvo2OqdplND/o=" parent-hash "rV9bfLq7c2eA4tYjVjwO4bxhm+y6GgZpl9J60L0fBkY=" with-interface 09:00:00 with-connect-type ""
+      allow id 1d6b:0003 serial "0000:00:14.0" name "xHCI Host Controller" hash "E8Zs26CP5+JQoiPVmDSuTb4j11VatW+WHlWxiX8+qJc=" parent-hash "rV9bfLq7c2eA4tYjVjwO4bxhm+y6GgZpl9J60L0fBkY=" with-interface 09:00:00 with-connect-type ""
+      allow id 1050:0407 serial "" name "YubiKey OTP+FIDO+CCID" hash "+yHSjnnIMzjrazEwqcEGVKmguy5xWgoVqqAQUnLyL5E=" parent-hash "jEP/6WzviqdJ5VSeTUY8PatCNBKeaREvo2OqdplND/o=" via-port "3-3" with-interface { 03:01:01 03:00:00 0b:00:00 } with-connect-type "hotplug"
+      allow id 8086:0b63 serial "" name "USB Bridge" hash "gSptQpfBIAzo6PN8OUUrc+V95M7pPFW7XmI7Ge62Kgs=" parent-hash "jEP/6WzviqdJ5VSeTUY8PatCNBKeaREvo2OqdplND/o=" via-port "3-8" with-interface ff:ff:ff with-connect-type "not used"
+      allow id 27c6:63bc serial "UIDE0267113_XXXX_MOC_B0" name "Goodix Fingerprint USB Device" hash "csvc9k4c736r5K9unXu6A4Q6RlSknGggTVyGGHGEq7U=" parent-hash "jEP/6WzviqdJ5VSeTUY8PatCNBKeaREvo2OqdplND/o=" with-interface ff:00:00 with-connect-type "not used"
+      allow id 8087:0033 serial "" name "" hash "ciwwGozaSw4maEXfs4NdvETeMt6bnFEK6f4vmCqfud0=" parent-hash "jEP/6WzviqdJ5VSeTUY8PatCNBKeaREvo2OqdplND/o=" via-port "3-10" with-interface { e0:01:01 e0:01:01 e0:01:01 e0:01:01 e0:01:01 e0:01:01 e0:01:01 e0:01:01 } with-connect-type "not used"
     '';
   };
 

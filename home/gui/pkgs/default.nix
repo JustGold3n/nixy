@@ -15,6 +15,7 @@
     thunderbird
     keepassxc
     legcord
+    telegram-desktop
 
     # Backup
     thunar
