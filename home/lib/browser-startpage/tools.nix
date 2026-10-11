@@ -12,7 +12,7 @@
         url = "https://excalidraw.com";
       }
       {
-        name = "Cobalt (downloader)";
+        name = "Cobalt (Downloader)";
         url = "https://cobalt.meowing.de";
       }
       {

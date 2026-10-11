@@ -133,7 +133,7 @@
       </div>''
     else mkFolder group.item;
 in {
-  home.file.".local/share/helium-startpage/index.html".text = ''
+  home.file.".local/share/browser-startpage/index.html".text = ''
     <!DOCTYPE html>
     <html lang="en">
     <head>
@@ -444,14 +444,14 @@ in {
     </html>
   '';
 
-  systemd.user.services.helium-startpage = {
+  systemd.user.services.browser-startpage = {
     Unit = {
-      Description = "Helium startpage HTTP server";
+      Description = "Local browser start page";
       After = ["network.target"];
     };
     Service = {
       Type = "simple";
-      ExecStart = "${pkgs.darkhttpd}/bin/darkhttpd %h/.local/share/helium-startpage --port 8888 --addr 127.0.0.1 --no-listing";
+      ExecStart = "${pkgs.darkhttpd}/bin/darkhttpd %h/.local/share/browser-startpage --port 8888 --addr 127.0.0.1 --no-listing";
       Restart = "on-failure";
     };
     Install.WantedBy = ["default.target"];

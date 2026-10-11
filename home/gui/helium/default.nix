@@ -102,47 +102,49 @@
 in {
   imports = [
     inputs.helium-browser.homeModules.default
-    ./bookmarks
+    ../../lib/browser-startpage
   ];
 
-  programs.helium = {
-    enable = true;
-    package = lib.mkForce wrappedPkg;
-  };
+  config = lib.mkIf ((config.var.hostname or "") != "nixtop") {
+    programs.helium = {
+      enable = true;
+      package = lib.mkForce wrappedPkg;
+    };
 
-  home.sessionVariables.BROWSER = "${config.programs.helium.package}/bin/helium";
+    home.sessionVariables.BROWSER = "${config.programs.helium.package}/bin/helium";
 
-  xdg.desktopEntries.helium = {
-    name = "Helium";
-    genericName = "Web Browser";
-    exec = "${config.programs.helium.package}/bin/helium %U";
-    icon = "${config.programs.helium.package}/share/icons/hicolor/256x256/apps/helium.png";
-    terminal = false;
-    categories = ["Network" "WebBrowser"];
-    mimeType = [
-      "text/html"
-      "text/xml"
-      "application/xhtml+xml"
-      "x-scheme-handler/http"
-      "x-scheme-handler/https"
-      "x-scheme-handler/ftp"
-    ];
-  };
+    xdg.desktopEntries.helium = {
+      name = "Helium";
+      genericName = "Web Browser";
+      exec = "${config.programs.helium.package}/bin/helium %U";
+      icon = "${config.programs.helium.package}/share/icons/hicolor/256x256/apps/helium.png";
+      terminal = false;
+      categories = ["Network" "WebBrowser"];
+      mimeType = [
+        "text/html"
+        "text/xml"
+        "application/xhtml+xml"
+        "x-scheme-handler/http"
+        "x-scheme-handler/https"
+        "x-scheme-handler/ftp"
+      ];
+    };
 
-  xdg.desktopEntries.helium-private = {
-    name = "Helium (Private window)";
-    genericName = "Web Browser";
-    exec = "${config.programs.helium.package}/bin/helium --incognito %U";
-    icon = "${config.programs.helium.package}/share/icons/hicolor/256x256/apps/helium.png";
-    terminal = false;
-    categories = ["Network" "WebBrowser"];
-    mimeType = ["text/html" "text/xml" "application/xhtml+xml"];
-  };
+    xdg.desktopEntries.helium-private = {
+      name = "Helium (Private window)";
+      genericName = "Web Browser";
+      exec = "${config.programs.helium.package}/bin/helium --incognito %U";
+      icon = "${config.programs.helium.package}/share/icons/hicolor/256x256/apps/helium.png";
+      terminal = false;
+      categories = ["Network" "WebBrowser"];
+      mimeType = ["text/html" "text/xml" "application/xhtml+xml"];
+    };
 
-  home.persistence."/persist" = lib.mkIf (config.var.impermanenceEnabled or false) {
-    directories = [
-      ".config/net.imput.helium"
-      ".pki" # NSS database (client certificates)
-    ];
+    home.persistence."/persist" = lib.mkIf (config.var.impermanenceEnabled or false) {
+      directories = [
+        ".config/net.imput.helium"
+        ".pki" # NSS database (client certificates)
+      ];
+    };
   };
 }

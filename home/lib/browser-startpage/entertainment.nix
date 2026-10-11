@@ -4,7 +4,7 @@
     icon = "movie";
     bookmarks = [
       {
-        name = "Youtube";
+        name = "YouTube";
         url = "https://youtube.com";
       }
       {

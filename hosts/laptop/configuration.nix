@@ -20,7 +20,6 @@
     ../../nixos/hyprland.nix
     ../../nixos/steam.nix
     ../../nixos/kernel-hardening.nix
-    ../../home/gui/helium/system.nix # I hate browser's configuration..
 
     # CHANGEME: You should probably remove those things:
     #./wireguard.nix

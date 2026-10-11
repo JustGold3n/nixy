@@ -8,7 +8,7 @@
         url = "https://n4c.hadi.icu";
       }
       {
-        name = "Cyberchef";
+        name = "CyberChef";
         url = "https://cyberchef.hadi.icu";
       }
       {

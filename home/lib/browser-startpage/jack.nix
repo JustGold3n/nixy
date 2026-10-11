@@ -20,7 +20,7 @@
         url = "https://git.hadi.icu";
       }
       {
-        name = "Default Creds";
+        name = "Default Credentials";
         url = "https://default-creds.hadi.icu";
       }
       {

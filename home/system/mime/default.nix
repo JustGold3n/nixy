@@ -12,9 +12,10 @@
     video = ["vlc.desktop"];
     directory = ["elio.desktop"];
     office = ["onlyoffice-desktopeditors.desktop"];
-    pdf = ["helium.desktop"];
+    pdf = ["zen-twilight.desktop"];
     archive = ["elio.desktop"];
-    browser = ["helium.desktop"];
+    browser = ["zen-twilight.desktop"];
+    mail = ["thunderbird.desktop"];
   };
 
   mimeMap = {
@@ -117,6 +118,10 @@
       "x-scheme-handler/http"
       "x-scheme-handler/https"
       "x-scheme-handler/ftp"
+    ];
+    mail = [
+      "message/rfc822"
+      "x-scheme-handler/mailto"
     ];
   };
 

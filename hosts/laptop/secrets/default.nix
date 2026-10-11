@@ -22,22 +22,7 @@ in {
         mode = "0600";
         path = "${home}/.ssh/github";
       };
-      personal-email = {
-        owner = username;
-      };
-      personal-email-passwd = {
-        owner = username;
-      };
-      seznam-email = {
-        owner = username;
-      };
-      seznam-email-passwd = {
-        owner = username;
-      };
-      work-email = {
-        owner = username;
-      };
-      work-email-passwd = {
+      keepass = {
         owner = username;
       };
     };

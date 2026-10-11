@@ -39,6 +39,8 @@
     fi
     exec ${pkgs.tofi}/bin/tofi-drun
   '';
+
+  browser = "${config.programs.zen-browser.package}/bin/zen-twilight";
 in {
   wayland.windowManager.hyprland.settings = {
     "$mod" = "SUPER";
@@ -46,8 +48,8 @@ in {
 
     bind =
       [
-        "$mod,T, exec, uwsm app -- ${config.programs.helium.package}/bin/helium" # Browser
-        "$mod,B, exec, uwsm app -- ${config.programs.helium.package}/bin/helium" # Browser
+        "$mod,T, exec, uwsm app -- ${browser}" # Browser
+        "$mod,B, exec, uwsm app -- ${browser}" # Browser
 
         # Power
         (

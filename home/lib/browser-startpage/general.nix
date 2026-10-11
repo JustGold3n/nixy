@@ -12,7 +12,7 @@
     url = "https://calendar.proton.me";
   }
   {
-    name = "Github";
+    name = "GitHub";
     url = "https://github.com";
   }
 ]

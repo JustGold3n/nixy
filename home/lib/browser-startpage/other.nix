@@ -16,8 +16,8 @@
             url = "https://www.nerdfonts.com/cheat-sheet";
           }
           {
-            name = "Helium Bangs";
-            url = "https://helium.computer/bangs";
+            name = "Zen Browser Documentation";
+            url = "https://docs.zen-browser.app";
           }
           {
             name = "NVF Options";
