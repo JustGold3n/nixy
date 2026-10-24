@@ -20,7 +20,7 @@
     fi
 
     cmd="elio"
-    termcmd="''${TERMCMD:-ghostty --gtk-single-instance=false --title=termfilechooser -e}"
+    termcmd="''${TERMCMD:-${pkgs.foot}/bin/foot --title=termfilechooser -e}"
 
     if [[ "$save" = "1" ]]; then
       set -- --chooser-file="$out" "$path"
@@ -47,7 +47,7 @@
       fi
     fi
   '';
-  termcmd = "ghostty --gtk-single-instance=false --title=termfilechooser -e";
+  termcmd = "${pkgs.foot}/bin/foot --title=termfilechooser -e";
 in {
   xdg.configFile."xdg-desktop-portal-termfilechooser/config".text = ''
     [filechooser]

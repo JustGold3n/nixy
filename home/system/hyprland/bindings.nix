@@ -48,9 +48,6 @@ in {
 
     bind =
       [
-        "$mod,T, exec, uwsm app -- ${browser}" # Browser
-        "$mod,B, exec, uwsm app -- ${browser}" # Browser
-
         # Power
         (
           "$mod, X, exec, "
@@ -79,10 +76,11 @@ in {
         )
 
         # Quick launch
-        "$mod,RETURN, exec, ${pkgs.ghostty}/bin/ghostty +new-window" # Ghostty (terminal, via daemon D-Bus)
-        "$mod,E, exec, ${pkgs.ghostty}/bin/ghostty +new-window -e elio" # Elio
+        "$mod,RETURN, exec, ${pkgs.foot}/bin/foot" # Foot terminal
+        "$mod,E, exec, ${pkgs.foot}/bin/foot -e elio" # Elio
         "$mod, D, exec, ${lib.getExe tofi-drun-toggle}" # Launcher (toggle)
         "$mod, N, exec, ${pkgs.swaynotificationcenter}/bin/swaync-client -t" # Notification center
+        "$mod,T, exec, uwsm app -- ${browser}" # Browser
 
         # Windows
         "$mod,Q, killactive," # Close window
@@ -105,6 +103,7 @@ in {
         "$shiftMod, S, movetoworkspace, special:scratch" # Move to scratch workspace
 
         # Utilities
+        "CTRL,B, exec, ${config.xdg.desktopEntries.clipboard-menu.exec}" # Clipboard history
         ", Print, exec, ${config.xdg.desktopEntries.screenshot-region.exec}" # Capture region
         "$shiftMod, Print, exec, ${config.xdg.desktopEntries.screenshot-screen.exec}" # Capture screen
       ]

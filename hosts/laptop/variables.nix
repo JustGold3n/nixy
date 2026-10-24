@@ -14,6 +14,7 @@
     configDirectory = "/home/" + config.var.username + "/.config/nixos"; # The path of the nixos configuration directory
 
     keyboardLayout = "us,cz";
+    keyboardVariant = ",qwerty";
 
     timeZone = "Europe/Prague";
     defaultLocale = "en_GB.UTF-8";

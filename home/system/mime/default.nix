@@ -5,8 +5,8 @@
   ...
 }: let
   defaultApps = {
-    text = ["nvim-ghostty.desktop"];
-    code = ["nvim-ghostty.desktop"];
+    text = ["nvim-foot.desktop"];
+    code = ["nvim-foot.desktop"];
     image = ["imv-dir.desktop"];
     audio = ["kew.desktop"];
     video = ["vlc.desktop"];
@@ -125,10 +125,10 @@
     ];
   };
 
-  nvim-ghostty = pkgs.makeDesktopItem {
-    name = "nvim-ghostty";
-    desktopName = "Neovim (Ghostty)";
-    exec = ''${pkgs.ghostty}/bin/ghostty +new-window --title="Neovim Editor" -e nvim %F'';
+  nvim-foot = pkgs.makeDesktopItem {
+    name = "nvim-foot";
+    desktopName = "Neovim (Foot)";
+    exec = ''${pkgs.foot}/bin/foot --title="Neovim Editor" -e nvim %F'';
     terminal = false;
     categories = ["Development" "TextEditor"];
     mimeTypes = mimeMap.code ++ mimeMap.text;
@@ -142,7 +142,7 @@
     )
   );
 in {
-  home.packages = [nvim-ghostty];
+  home.packages = [nvim-foot];
 
   xdg = {
     configFile."mimeapps.list".force = true;

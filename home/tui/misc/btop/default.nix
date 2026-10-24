@@ -12,7 +12,7 @@ in {
 
   xdg.desktopEntries.btop = {
     name = "btop++";
-    exec = "${pkgs.ghostty}/bin/ghostty +new-window -e ${btopPackage}/bin/btop";
+    exec = "${pkgs.foot}/bin/foot -e ${btopPackage}/bin/btop";
     comment = "Ressources monitor (btop)";
     categories = ["Settings"];
     terminal = false;

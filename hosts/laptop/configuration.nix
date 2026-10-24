@@ -14,12 +14,14 @@
     #../../nixos/lanzaboot.nix # CHANGEME: Remove this line and uncomment the next one if you don't want to setup secure boot
     ../../nixos/systemd-boot.nix
     ../../nixos/tuigreet.nix
-    ../../nixos/autologin.nix # Skip first TUIGreet login, use LUKS password to unlock the keyring
+    ../../nixos/autologin.nix # Keep automatic desktop login after LUKS unlock.
     ../../nixos/users.nix
     ../../nixos/utils.nix
     ../../nixos/hyprland.nix
     ../../nixos/steam.nix
     ../../nixos/kernel-hardening.nix
+    ../../nixos/workstation-security.nix
+    ../../nixos/yubikey.nix
 
     # CHANGEME: You should probably remove those things:
     #./wireguard.nix
@@ -32,8 +34,8 @@
 
   home-manager.users."${config.var.username}" = import ./home.nix;
 
-  # User password
-  users.users.${config.var.username}.hashedPassword = "$y$j9T$A7gH534UczuBxulj9IfEu1$ImRy3lpYpemRWNVIkA7efKPWXneFiqhZnEF1aMkWcD8";
+  # Decrypt the existing hash before user creation; never copy it to the store.
+  users.users.${config.var.username}.hashedPasswordFile = config.sops.secrets.login-password-hash.path;
 
   # Impermanence: declares what should survive a wipe of "/".
   environment.persistence."/persist" = {

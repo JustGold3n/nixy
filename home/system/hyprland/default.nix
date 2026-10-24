@@ -65,10 +65,6 @@ in {
         ",preferred,auto,1" # default
       ];
 
-      exec-once = [
-        "systemctl --user start app-com.mitchellh.ghostty.service"
-      ];
-
       env = [
         "XDG_CURRENT_DESKTOP,Hyprland"
         "XDG_SESSION_TYPE,wayland"
@@ -158,8 +154,9 @@ in {
 
       input = {
         kb_layout = keyboardLayout;
+        kb_variant = config.var.keyboardVariant or "";
 
-        kb_options = "caps:escape";
+        kb_options = "grp:alt_shift_toggle,caps:escape";
         follow_mouse = 1;
         sensitivity = 0.5;
         repeat_delay = 300;

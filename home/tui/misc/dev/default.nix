@@ -17,6 +17,11 @@
         air
         duckdb
         python3
+        rustc
+        cargo
+        rustfmt
+        clippy
+        rust-analyzer
         jq
         nix-prefetch-github
         rsync

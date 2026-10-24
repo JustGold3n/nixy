@@ -53,7 +53,11 @@ in {
     libinput.enable = true;
     xserver = {
       enable = true;
-      xkb.layout = keyboardLayout;
+      xkb = {
+        layout = keyboardLayout;
+        variant = config.var.keyboardVariant or "";
+        options = "grp:alt_shift_toggle,caps:escape";
+      };
     };
     gnome.gnome-keyring.enable = true;
     psd = {
@@ -77,7 +81,7 @@ in {
     power-profiles-daemon.enable = true;
     udisks2.enable = true;
   };
-  console.keyMap = keyboardLayout;
+  console.useXkbConfig = true;
 
   environment = {
     variables = {

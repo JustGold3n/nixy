@@ -4,6 +4,35 @@
 
     keymaps = [
       {
+        key = "<C-BS>";
+        mode = ["i" "c"];
+        silent = true;
+        action = "<C-w>";
+        desc = "Delete previous word";
+      }
+      {
+        key = "<C-Del>";
+        mode = "i";
+        silent = true;
+        expr = true;
+        action = ''col('.') < col('$') ? "\<C-g>u\<C-o>dw" : ""'';
+        desc = "Delete next word";
+      }
+      {
+        key = "<C-Del>";
+        mode = "c";
+        expr = true;
+        lua = true;
+        action = ''
+          function()
+            local rest = vim.fn.getcmdline():sub(vim.fn.getcmdpos())
+            local word = vim.fn.matchstr(rest, [=[^\s*\%(\k\+\|[^\k[:space:]]\+\)]=])
+            return string.rep("<Del>", vim.fn.strchars(word))
+          end
+        '';
+        desc = "Delete next word";
+      }
+      {
         key = "s";
         mode = "n";
         silent = true;

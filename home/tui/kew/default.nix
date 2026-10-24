@@ -25,7 +25,7 @@ in {
 
   xdg.desktopEntries.kew = {
     name = "Music Player";
-    exec = "${pkgs.ghostty}/bin/ghostty --window-padding-x=0 --window-padding-y=0 -e ${kewLauncher} %f";
+    exec = "${pkgs.foot}/bin/foot --override=pad=0x0 -e ${kewLauncher} %f";
     comment = "Play music from the terminal";
     categories = ["Audio" "Music"];
     terminal = false;

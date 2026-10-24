@@ -9,9 +9,17 @@
   home = "/home/${username}";
 in {
   sops = {
-    age.keyFile = "${home}/.config/sops/age/keys.txt";
+    # User password secrets must be available before activation restores
+    # per-user bind mounts. Read the persistent backing file directly.
+    age.keyFile =
+      if config.var.impermanenceEnabled
+      then "/persist${home}/.config/sops/age/keys.txt"
+      else "${home}/.config/sops/age/keys.txt";
     defaultSopsFile = ./secrets.yaml;
     secrets = {
+      login-password-hash = {
+        neededForUsers = true;
+      };
       ssh-config = {
         owner = username;
         mode = "0600";

@@ -17,7 +17,7 @@
 
   xdg.desktopEntries.andcli = {
     name = "andcli";
-    exec = "${pkgs.ghostty}/bin/ghostty +new-window -e ${pkgs-unstable.andcli}/bin/andcli ${config.home.homeDirectory}/.cache/protonauth.json.txt --type protonauth";
+    exec = "${pkgs.foot}/bin/foot -e ${pkgs-unstable.andcli}/bin/andcli ${config.home.homeDirectory}/.cache/protonauth.json.txt --type protonauth";
     comment = "2FA TUI for your shell";
     categories = ["Utility" "Security" "ConsoleOnly"];
     terminal = false;

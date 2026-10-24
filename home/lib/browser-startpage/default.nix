@@ -453,6 +453,24 @@ in {
       Type = "simple";
       ExecStart = "${pkgs.darkhttpd}/bin/darkhttpd %h/.local/share/browser-startpage --port 8888 --addr 127.0.0.1 --no-listing";
       Restart = "on-failure";
+      NoNewPrivileges = true;
+      PrivateTmp = true;
+      PrivateDevices = true;
+      ProtectSystem = "strict";
+      ProtectHome = "tmpfs";
+      BindReadOnlyPaths = ["%h/.local/share/browser-startpage"];
+      # Impermanence and sops expose alternate paths outside /home.
+      InaccessiblePaths = ["-/persist" "-/run/secrets" "-/run/secrets.d" "-/run/secrets-for-users" "-/run/secrets-for-users.d" "-/run/user"];
+      ProtectKernelTunables = true;
+      ProtectKernelModules = true;
+      ProtectControlGroups = true;
+      RestrictSUIDSGID = true;
+      RestrictNamespaces = true;
+      RestrictAddressFamilies = ["AF_INET" "AF_UNIX"];
+      LockPersonality = true;
+      MemoryDenyWriteExecute = true;
+      CapabilityBoundingSet = "";
+      UMask = "0077";
     };
     Install.WantedBy = ["default.target"];
   };

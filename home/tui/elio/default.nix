@@ -16,7 +16,7 @@ in {
 
   xdg.desktopEntries.elio = {
     name = "elio";
-    exec = "${pkgs.ghostty}/bin/ghostty +new-window -e ${inputs.elio.packages.${pkgs.stdenv.hostPlatform.system}.elio}/bin/elio %f";
+    exec = "${pkgs.foot}/bin/foot -e ${inputs.elio.packages.${pkgs.stdenv.hostPlatform.system}.elio}/bin/elio %f";
     terminal = false;
     icon = "elio";
     mimeType = ["inode/directory"];

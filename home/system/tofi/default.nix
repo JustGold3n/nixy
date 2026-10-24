@@ -42,6 +42,7 @@ in {
       placeholder-text = "Search...";
 
       drun-launch = true;
+      terminal = "${config.programs.foot.package}/bin/foot";
     };
   };
 }

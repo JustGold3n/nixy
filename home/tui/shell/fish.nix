@@ -79,7 +79,7 @@
           end
 
           for file in $imgs
-            chafa --format=kitty "$file"
+            chafa "$file"
           end
 
           if test (count $rest) -gt 0; or test (count $imgs) -eq 0
@@ -144,6 +144,10 @@
 
       bind --mode insert \e\[1\;5C forward-word
       bind --mode insert \e\[1\;5D backward-word
+      for mode in insert default
+        bind --mode $mode ctrl-backspace backward-kill-word
+        bind --mode $mode ctrl-delete kill-word
+      end
       bind --mode insert \cf _fzf_file_no_hidden
       bind --mode insert \e\[A history-search-backward
       bind --mode insert \e\[B history-search-forward

@@ -15,7 +15,7 @@
 
   xdg.desktopEntries.myx = {
     name = "Spotify";
-    exec = "${pkgs.ghostty}/bin/ghostty --window-padding-x=0 --window-padding-y=0 -e ${pkgs-unstable.myx}/bin/myx";
+    exec = "${pkgs.foot}/bin/foot --override=pad=0x0 -e ${pkgs-unstable.myx}/bin/myx";
     icon = "spotify";
     comment = "Control Spotify from the terminal";
     categories = ["Audio" "Music"];

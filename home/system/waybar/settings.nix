@@ -36,7 +36,7 @@ in {
         tooltip-format = "{capacity}%  ·  {time}";
         tooltip-format-full = "Full\n{capacity}%";
         tooltip-format-charging = "Charging\n{capacity}%  ·  {time}";
-        on-click = "${pkgs.ghostty}/bin/ghostty +new-window -e ${pkgs.nur.repos.anotherhadi.settuings}/bin/settuings --page power";
+        on-click = "${pkgs.foot}/bin/foot -e ${pkgs.nur.repos.anotherhadi.settuings}/bin/settuings --page power";
         states = {
           warning = 30;
           critical = 15;
@@ -45,7 +45,7 @@ in {
 
       "custom/caffeine" = {
         exec = "${pkgs.coreutils}/bin/printf '󰅶'";
-        exec-if = "! systemctl --user is-active --quiet hypridle";
+        exec-if = "systemctl --user is-active --quiet caffeine";
         format = "{}";
         interval = 5;
         on-click = "${config.scripts.caffeine-toggle}/bin/caffeine-toggle";
@@ -66,7 +66,7 @@ in {
         exec-if = "${pkgs.bluez}/bin/bluetoothctl list 2>/dev/null | grep -q Controller";
         return-type = "json";
         interval = 5;
-        on-click = "${pkgs.ghostty}/bin/ghostty +new-window -e ${pkgs.nur.repos.anotherhadi.settuings}/bin/settuings --page bluetooth";
+        on-click = "${pkgs.foot}/bin/foot -e ${pkgs.nur.repos.anotherhadi.settuings}/bin/settuings --page bluetooth";
       };
 
       "custom/osd" = {
@@ -92,7 +92,7 @@ in {
         tooltip-format = "{volume}%";
         format-muted = "<span size='12pt'>󰝟</span>";
         scroll-step = 2;
-        on-click = "${pkgs.ghostty}/bin/ghostty +new-window -e ${pkgs.nur.repos.anotherhadi.settuings}/bin/settuings --page audio";
+        on-click = "${pkgs.foot}/bin/foot -e ${pkgs.nur.repos.anotherhadi.settuings}/bin/settuings --page audio";
         format-icons = {
           headphone = "";
           hands-free = "";
@@ -118,7 +118,7 @@ in {
         exec = "${config.scripts.networkScript}";
         return-type = "json";
         interval = 10;
-        on-click = "${pkgs.ghostty}/bin/ghostty +new-window -e ${pkgs.nur.repos.anotherhadi.settuings}/bin/settuings --page network";
+        on-click = "${pkgs.foot}/bin/foot -e ${pkgs.nur.repos.anotherhadi.settuings}/bin/settuings --page network";
       };
 
       tray = {

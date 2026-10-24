@@ -6,7 +6,7 @@
 
   xdg.desktopEntries.usbguard-tui = {
     name = "USBGuard TUI";
-    exec = "${pkgs.ghostty}/bin/ghostty +new-window -e ${pkgs.polkit}/bin/pkexec ${pkgs.nur.repos.anotherhadi.usbguard-tui}/bin/usbguard-tui";
+    exec = "${pkgs.foot}/bin/foot -e ${pkgs.polkit}/bin/pkexec ${pkgs.nur.repos.anotherhadi.usbguard-tui}/bin/usbguard-tui";
     comment = "Manage USBGuard rules";
     categories = ["Settings"];
     terminal = false;

@@ -233,7 +233,7 @@
 
     settuings = {
       name = "Settings";
-      exec = "${pkgs.ghostty}/bin/ghostty +new-window -e ${pkgs.nur.repos.anotherhadi.settuings}/bin/settuings";
+      exec = "${pkgs.foot}/bin/foot -e ${pkgs.nur.repos.anotherhadi.settuings}/bin/settuings";
       icon = "preferences-system-symbolic";
       comment = "Terminal based settings (wifi, bluetooth, audio, ...)";
       categories = ["Settings"];

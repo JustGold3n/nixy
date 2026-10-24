@@ -26,6 +26,7 @@
         { mode = 'n', keys = '<Leader>t', desc = '+tools' },
         { mode = 'n', keys = '<Leader>u', desc = '+ui' },
         { mode = 'n', keys = '<Leader>l', desc = '+lsp' },
+        { mode = 'n', keys = '<Leader>d', desc = '+debug' },
         { mode = 'n', keys = '<Leader>x', desc = '+trouble' },
         { mode = 'n', keys = '<Leader>!', desc = 'shell' },
         { mode = 'v', keys = '<Leader>!', desc = 'shell' },

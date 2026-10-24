@@ -16,7 +16,7 @@
 
   xdg.desktopEntries.eilmeldung = {
     name = "eilmeldung";
-    exec = "${pkgs.ghostty}/bin/ghostty +new-window -e ${pkgs-unstable.eilmeldung}/bin/eilmeldung";
+    exec = "${pkgs.foot}/bin/foot -e ${pkgs-unstable.eilmeldung}/bin/eilmeldung";
     comment = "Feature-rich TUI RSS reader";
     categories = ["Network" "ConsoleOnly"];
     terminal = false;

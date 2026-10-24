@@ -27,7 +27,7 @@
     chafa # Image to ANSI/Unicode converter and more.
     pkgs-unstable.yt-dlp
 
-    codex
+    pkgs-unstable.codex
     pkgs-unstable.graphify
     # Just cool
     tty-solitaire

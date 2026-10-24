@@ -44,8 +44,8 @@
     };
 
     cursor = {
-      name = "BreezeX-RosePine-Linux";
-      package = pkgs.rose-pine-cursor;
+      name = "ArcStarry-Purple";
+      package = pkgs.callPackage ./arcstarry-cursors.nix {};
       size = 20;
     };
 

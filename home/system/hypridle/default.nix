@@ -1,31 +1,48 @@
 # hypridle handles idle management: lock the screen, turn the display off, and
-# suspend after periods of inactivity. The `caffeine-toggle` script pauses it.
+# suspend after periods of inactivity. Keep Awake inhibits idle handling while
+# leaving explicit locking and the before-sleep lock handler running.
 {
   pkgs,
   scripts,
   ...
 }: {
   scripts.caffeine-toggle = pkgs.writeShellScriptBin "caffeine-toggle" ''
-    # Pause hypridle (stay awake) or resume it.
-    if systemctl --user is-active --quiet hypridle; then
-      systemctl --user stop hypridle
-      OSD_TEXT="󰅶  Keep Awake On"
-    else
-      systemctl --user start hypridle
+    set -eu
+    if systemctl --user is-active --quiet caffeine; then
+      systemctl --user stop caffeine
       OSD_TEXT="󰾫  Keep Awake Off"
+    else
+      systemctl --user start caffeine
+      OSD_TEXT="󰅶  Keep Awake On"
     fi
     ${scripts.waybar-osd}/bin/waybar-osd "$OSD_TEXT"
   '';
 
   home.packages = [scripts.caffeine-toggle];
 
+  systemd.user.services.caffeine = {
+    Unit = {
+      Description = "Keep awake without disabling lock-before-sleep";
+      PartOf = ["graphical-session.target"];
+      Requires = ["hypridle.service"];
+      After = ["hypridle.service"];
+    };
+    Service = {
+      ExecStart = "${pkgs.systemd}/bin/systemd-inhibit --what=idle --mode=block --who=KeepAwake --why=KeepAwake ${pkgs.coreutils}/bin/sleep infinity";
+      NoNewPrivileges = true;
+    };
+  };
+
   services.hypridle = {
     enable = true;
     settings = {
       general = {
         # Avoid starting multiple hyprlock instances.
-        lock_cmd = "${pkgs.procps}/bin/pidof ${pkgs.hyprlock}/bin/hyprlock || ${pkgs.hyprlock}/bin/hyprlock --grace 5";
+        lock_cmd = "${pkgs.procps}/bin/pidof hyprlock || ${pkgs.hyprlock}/bin/hyprlock";
         before_sleep_cmd = "loginctl lock-session";
+        # Wait for the compositor to acknowledge the lock before releasing
+        # the sleep delay inhibitor.
+        inhibit_sleep = 3;
         after_sleep_cmd = "${pkgs.hyprland}/bin/hyprctl dispatch dpms on";
       };
 
@@ -52,7 +69,7 @@
       name = "Keep Awake";
       exec = "${scripts.caffeine-toggle}/bin/caffeine-toggle";
       icon = "my-caffeine-on-symbolic";
-      comment = "Pause or resume idle locking and suspend";
+      comment = "Pause idle actions while keeping lock-before-sleep active";
       categories = ["System"];
       terminal = false;
       settings.Keywords = "caffeine;idle;awake;inhibit;suspend;";

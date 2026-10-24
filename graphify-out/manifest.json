@@ -96,10 +96,10 @@
     "semantic_hash": "c6ca362fcabb73a9ee90392800a81c46"
   },
   "docs/NEOVIM.md": {
-    "mtime": 1790855812.6953738,
-    "seen": 1791453367.997543,
-    "ast_hash": "1eedae3ae7d145be6382b0892b7e8c60",
-    "semantic_hash": "1eedae3ae7d145be6382b0892b7e8c60"
+    "mtime": 1792179866.875426,
+    "seen": 1792179882.8697133,
+    "ast_hash": "6f59f67bbb5fb9fe9a7c716408e25b8b",
+    "semantic_hash": ""
   },
   "docs/SERVER.md": {
     "mtime": 1790855812.6953738,

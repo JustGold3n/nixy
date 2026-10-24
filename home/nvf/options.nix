@@ -9,8 +9,8 @@
       shiftwidth = 2;
       foldlevel = 99;
       foldcolumn = "auto:1";
-      mousescroll = "ver:1,hor:1";
-      mousemoveevent = true;
+      mouse = "";
+      mousemoveevent = false;
       fillchars = "eob:‿,fold: ,foldopen:▼,foldsep:⸽,foldclose:⏵";
       signcolumn = "yes";
       tabstop = 2;
