@@ -17,7 +17,7 @@
     ../../nixos/autologin.nix # Keep automatic desktop login after LUKS unlock.
     ../../nixos/users.nix
     ../../nixos/utils.nix
-    ../../nixos/hyprland.nix
+    ../../nixos/niri.nix
     ../../nixos/steam.nix
     ../../nixos/kernel-hardening.nix
     ../../nixos/workstation-security.nix

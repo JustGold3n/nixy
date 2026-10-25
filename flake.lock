@@ -1,5 +1,25 @@
 {
   "nodes": {
+    "amane": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs-unstable"
+        ]
+      },
+      "locked": {
+        "lastModified": 1792598840,
+        "narHash": "sha256-fU20wtIC9wlOP9mvcCboSdB67zVq2ZSe9FjD7mwyHMc=",
+        "owner": "MystiaFin",
+        "repo": "amane",
+        "rev": "544cbfc23af37f84ac237cd9bec53173981772b3",
+        "type": "github"
+      },
+      "original": {
+        "owner": "MystiaFin",
+        "repo": "amane",
+        "type": "github"
+      }
+    },
     "base16": {
       "inputs": {
         "fromYaml": "fromYaml"
@@ -697,11 +717,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1792820612,
-        "narHash": "sha256-qHiKLcUqi32p1locz4pMnfZlSit43NMzjQgxwmoW6Aw=",
+        "lastModified": 1792837981,
+        "narHash": "sha256-ztiRW9r9/laXEort5Q0n0Qp58uRqwY41CM5PfjR1bgI=",
         "owner": "nix-community",
         "repo": "nur",
-        "rev": "2a70b25e8c5b047fb9eb9469f8a159a7a1ade0b7",
+        "rev": "03cc2b0cd84c2f3b30c7e5bf3f470c57700464f9",
         "type": "github"
       },
       "original": {
@@ -798,6 +818,7 @@
     },
     "root": {
       "inputs": {
+        "amane": "amane",
         "default-creds": "default-creds",
         "default-creds-web": "default-creds-web",
         "disko": "disko",
@@ -817,6 +838,7 @@
         "nvf-config": "nvf-config",
         "sops-nix": "sops-nix",
         "stylix": "stylix",
+        "suzuha": "suzuha",
         "tldr-pages-src": "tldr-pages-src",
         "zen-browser": "zen-browser"
       }
@@ -893,6 +915,22 @@
         "owner": "nix-community",
         "ref": "release-26.05",
         "repo": "stylix",
+        "type": "github"
+      }
+    },
+    "suzuha": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1792510153,
+        "narHash": "sha256-LUaYTjk1Q+gv8WjN+Oa1WAIlJcePOoFIvV0aRrnpVGc=",
+        "owner": "MystiaFin",
+        "repo": "suzuha",
+        "rev": "e2c6adeb32c05b7c802ba342e929be978fdad9b1",
+        "type": "github"
+      },
+      "original": {
+        "owner": "MystiaFin",
+        "repo": "suzuha",
         "type": "github"
       }
     },

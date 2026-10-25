@@ -6,6 +6,11 @@
   ...
 }: let
   isNixtop = (config.var.hostname or "") == "nixtop";
+  useNiri = osConfig.programs.niri.enable;
+  notificationService =
+    if useNiri
+    then "suzuha.service"
+    else "swaync.service";
   keepassDatabase = "${config.home.homeDirectory}/.local/share/database_pc.kdbx";
   keepassPasswordFile = osConfig.sops.secrets.keepass.path;
   keepassConfig = "${config.xdg.configHome}/keepassxc/keepassxc.ini";
@@ -71,61 +76,130 @@
     ${pkgs.coreutils}/bin/mv "$temporary" "$settings"
     trap - EXIT
   '';
+  # Niri has no minimize action. Keep Thunderbird's main window unmapped via
+  # Xwayland so mail checking continues without occupying a workspace.
+  thunderbirdWindow = pkgs.writeShellApplication {
+    name = "thunderbird-window";
+    runtimeInputs = [pkgs.coreutils pkgs.systemd pkgs.xdotool];
+    text = ''
+      visibility=()
+      case "''${1:-}" in
+        hide) action=windowunmap; visibility=(--onlyvisible) ;;
+        show) action=windowmap ;;
+        *) echo "Usage: thunderbird-window hide|show" >&2; exit 2 ;;
+      esac
+      for _ in $(seq 1 200); do
+        main_pid="$(systemctl --user show thunderbird.service -p MainPID --value)"
+        if [[ "$main_pid" != 0 ]]; then
+          # The X11 window exists before Thunderbird maps it during startup.
+          # Wait for that first map before hiding, otherwise it reappears.
+          window="$(xdotool search --all --limit 1 "''${visibility[@]}" --pid "$main_pid" --role '^3pane$' || true)"
+          if [[ -n "$window" ]]; then
+            if [[ "$action" == windowunmap ]]; then
+              # Thunderbird maps the main window again while restoring tabs.
+              # Keep it hidden through startup; the launcher waits for this
+              # ExecStartPost to finish before deliberately showing it.
+              for _ in $(seq 1 25); do
+                timeout 5 xdotool windowunmap --sync "$window"
+                sleep 0.2
+              done
+              exit 0
+            fi
+            exec timeout 5 xdotool "$action" --sync "$window"
+          fi
+        fi
+        sleep 0.1
+      done
+      echo "Thunderbird's main window did not appear" >&2
+      exit 1
+    '';
+  };
   mkSpecialWorkspaceLauncher = {
     name,
     service,
     workspace,
     windowClass,
     executable,
+    revealCommand ? "",
   }:
     pkgs.writeShellApplication {
       inherit name;
       runtimeInputs = [
         pkgs.coreutils
-        pkgs.hyprland
+        (
+          if useNiri
+          then osConfig.programs.niri.package
+          else pkgs.hyprland
+        )
         pkgs.jq
         pkgs.systemd
       ];
-      text = ''
-        systemctl --user start ${service}.service
+      text =
+        ''
+          systemctl --user start ${service}.service
+          ${revealCommand}
+        ''
+        + (
+          if useNiri
+          then ''
+            find_client() {
+              ${osConfig.programs.niri.package}/bin/niri msg --json windows \
+                | ${lib.getExe pkgs.jq} -r --arg class ${lib.escapeShellArg windowClass} \
+                  'first(.[] | select((.app_id // "" | ascii_downcase) == ($class | ascii_downcase)) | .id) // empty'
+            }
+            client_id="$(find_client)"
+            if (( $# > 0 )) || [[ -z "$client_id" ]]; then
+              ${executable} "$@" >/dev/null 2>&1 &
+            fi
+            for _ in $(seq 1 50); do
+              client_id="$(find_client)"
+              if [[ -n "$client_id" ]]; then
+                exec ${osConfig.programs.niri.package}/bin/niri msg action focus-window --id "$client_id"
+              fi
+              sleep 0.1
+            done
+            echo "${service} started, but its window did not appear" >&2
+            exit 1
+          ''
+          else ''
+            find_client() {
+              ${pkgs.hyprland}/bin/hyprctl -j clients \
+                | ${lib.getExe pkgs.jq} -r --arg class ${lib.escapeShellArg windowClass} \
+                  'first(.[] | select(.class == $class) | .address) // empty'
+            }
 
-        find_client() {
-          ${pkgs.hyprland}/bin/hyprctl -j clients \
-            | ${lib.getExe pkgs.jq} -r --arg class ${lib.escapeShellArg windowClass} \
-              'first(.[] | select(.class == $class) | .address) // empty'
-        }
+            client_address="$(find_client)"
 
-        client_address="$(find_client)"
+            # Both applications are single-instance. Ask the service-owned process
+            # to map a minimized window, or forward a URI/file argument. Do this in
+            # the background so a failed single-instance handoff cannot block the
+            # launcher before it reveals the special workspace.
+            if (( $# > 0 )) || [[ -z "$client_address" ]]; then
+              ${executable} "$@" >/dev/null 2>&1 &
+            fi
 
-        # Both applications are single-instance. Ask the service-owned process
-        # to map a minimized window, or forward a URI/file argument. Do this in
-        # the background so a failed single-instance handoff cannot block the
-        # launcher before it reveals the special workspace.
-        if (( $# > 0 )) || [[ -z "$client_address" ]]; then
-          ${executable} "$@" >/dev/null 2>&1 &
-        fi
+            for _ in $(seq 1 50); do
+              client_address="$(find_client)"
+              if [[ -n "$client_address" ]]; then
+                break
+              fi
+              sleep 0.1
+            done
 
-        for _ in $(seq 1 50); do
-          client_address="$(find_client)"
-          if [[ -n "$client_address" ]]; then
-            break
-          fi
-          sleep 0.1
-        done
+            if [[ -z "$client_address" ]]; then
+              echo "${service} started, but its window did not appear" >&2
+              exit 1
+            fi
 
-        if [[ -z "$client_address" ]]; then
-          echo "${service} started, but its window did not appear" >&2
-          exit 1
-        fi
+            if ! ${pkgs.hyprland}/bin/hyprctl -j monitors \
+              | ${lib.getExe pkgs.jq} -e --arg workspace ${lib.escapeShellArg "special:${workspace}"} \
+                'any(.[]; .specialWorkspace.name == $workspace)' >/dev/null; then
+              ${pkgs.hyprland}/bin/hyprctl dispatch togglespecialworkspace ${lib.escapeShellArg workspace} >/dev/null
+            fi
 
-        if ! ${pkgs.hyprland}/bin/hyprctl -j monitors \
-          | ${lib.getExe pkgs.jq} -e --arg workspace ${lib.escapeShellArg "special:${workspace}"} \
-            'any(.[]; .specialWorkspace.name == $workspace)' >/dev/null; then
-          ${pkgs.hyprland}/bin/hyprctl dispatch togglespecialworkspace ${lib.escapeShellArg workspace} >/dev/null
-        fi
-
-        ${pkgs.hyprland}/bin/hyprctl dispatch focuswindow "address:$client_address" >/dev/null
-      '';
+            ${pkgs.hyprland}/bin/hyprctl dispatch focuswindow "address:$client_address" >/dev/null
+          ''
+        );
     };
   openKeePassXC = mkSpecialWorkspaceLauncher {
     name = "open-keepassxc";
@@ -140,6 +214,7 @@
     workspace = "mail";
     windowClass = "thunderbird";
     executable = "${config.programs.thunderbird.finalPackage}/bin/thunderbird";
+    revealCommand = lib.optionalString useNiri "${lib.getExe thunderbirdWindow} show";
   };
 in {
   home.packages =
@@ -175,7 +250,7 @@ in {
   # Keep GUI-backed background services on unbound special workspaces. The
   # silent rules are a fallback for startup or error dialogs: neither service
   # can steal focus, switch the active workspace, or animate onto the screen.
-  wayland.windowManager.hyprland.settings.windowrule = lib.mkIf isNixtop [
+  wayland.windowManager.hyprland.settings.windowrule = lib.mkIf (isNixtop && !useNiri) [
     "match:class ^(org\\.keepassxc\\.KeePassXC|keepassxc)$, workspace special:keepass silent, no_anim on, suppress_event activate activatefocus"
     "match:class ^(thunderbird|Thunderbird|org\\.mozilla\\.Thunderbird)$, workspace special:mail silent, no_anim on, suppress_event activate activatefocus"
   ];
@@ -200,13 +275,15 @@ in {
         Value = true;
         Status = "locked";
       };
+      "mail.biff.use_system_alert" = {
+        Value = true;
+        Status = "locked";
+      };
     };
   };
 
-  # The background services keep these applications on hidden special
-  # workspaces. Override their launcher entries so opening an already-running
-  # instance reveals and focuses its workspace instead of appearing to do
-  # nothing.
+  # Reveal the service-owned window on its compositor workspace when launched
+  # again, including when the single-instance application is already running.
   xdg.desktopEntries = lib.mkIf isNixtop {
     legcord = {
       name = "Discord";
@@ -281,13 +358,15 @@ in {
     thunderbird = {
       Unit = {
         Description = "Thunderbird background mail client";
-        After = ["graphical-session.target" "swaync.service"];
-        Wants = ["swaync.service"];
+        After = ["graphical-session.target" notificationService];
+        Wants = [notificationService];
         PartOf = ["graphical-session.target"];
       };
       Service = {
         Type = "exec";
         ExecStart = "${config.programs.thunderbird.finalPackage}/bin/thunderbird -mail";
+        Environment = lib.optionals useNiri ["MOZ_ENABLE_WAYLAND=0" "GDK_BACKEND=x11"];
+        ExecStartPost = lib.optionalString useNiri "${lib.getExe thunderbirdWindow} hide";
         Restart = "always";
         RestartSec = 5;
       };
@@ -297,8 +376,8 @@ in {
     legcord = {
       Unit = {
         Description = "Legcord background Discord client";
-        After = ["graphical-session.target" "swaync.service"];
-        Wants = ["swaync.service"];
+        After = ["graphical-session.target" notificationService];
+        Wants = [notificationService];
         PartOf = ["graphical-session.target"];
       };
       Service = {

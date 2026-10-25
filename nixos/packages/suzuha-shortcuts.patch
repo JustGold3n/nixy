@@ -1,0 +1,66 @@
+--- a/cli/template/example/suzuha/main.rs
++++ b/cli/template/example/suzuha/main.rs
+@@ -3,6 +3,7 @@
+ mod converter;
+ mod floating;
+ mod fonts;
++mod focus;
+ mod integrations;
+ mod liquid;
+ mod lock_screen;
+@@ -58,6 +59,11 @@
+         .ipc("utility", overlay::utility::ipc)
+         .ipc("control", overlay::control_center::ipc)
+         .ipc("settings", settings::ipc)
++        .ipc("power", |_| {
++            overlay::Overlay::toggle_power_menu();
++            String::from("ok")
++        })
++        .ipc("focus", focus::ipc)
+         .ipc("lock", lock_screen::ipc)
+         .ipc("wallpaper", wallpaper::picker::ipc)
+         .ipc("converter", converter::ipc)
+--- a/cli/template/example/suzuha/bar.rs
++++ b/cli/template/example/suzuha/bar.rs
+@@ -14,6 +14,7 @@
+ };
+ 
+ use crate::lock_screen::Curtain;
++use crate::focus::Focus;
+ use crate::motion::{self as shell_motion, DEFAULT_SPATIAL};
+ use crate::settings::Settings;
+ use crate::theme;
+@@ -34,7 +35,7 @@
+ 
+ // the room the bar keeps free for itself, none while it hides
+ pub fn reserved() -> f32 {
+-    if Settings::read().flag("bar_auto_hide") {
++    if Focus::read().enabled || Settings::read().flag("bar_auto_hide") {
+         return 0.0;
+     }
+ 
+@@ -57,12 +58,13 @@
+ 
+     let height = settings.number("bar_height");
+     let bottom = settings.text("bar_position") == "bottom";
+-    let hides = settings.flag("bar_auto_hide");
++    let focused = Focus::read().enabled;
++    let hides = focused || settings.flag("bar_auto_hide");
+ 
+     drop(settings);
+ 
+     // how far the bar is out, always all the way unless it hides
+-    let target = if !hides || Reveal::read().inside { 1.0 } else { 0.0 };
++    let target = if !focused && (!hides || Reveal::read().inside) { 1.0 } else { 0.0 };
+ 
+     let shown = shell_motion::follow(&format!("bar:{}", monitor.name), target, DEFAULT_SPATIAL);
+ 
+@@ -127,7 +129,7 @@
+                 .width(Parent)
+                 .height(Parent)
+                 .fill(behind)
+-                .opacity(Curtain::read().items.value())
++                .opacity(if focused { 0.0 } else { Curtain::read().items.value() })
+                 .clip()
+                 .on_hover(reveal::hover)
+                 .child(Rectangle::new().width(Parent).height(height).translate(0.0, slide).child(bar)),

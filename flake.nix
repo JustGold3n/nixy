@@ -7,6 +7,14 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-26.05";
     nixpkgs-unstable.url = "github:nixos/nixpkgs/nixos-unstable";
+    amane = {
+      url = "github:MystiaFin/amane";
+      inputs.nixpkgs.follows = "nixpkgs-unstable";
+    };
+    suzuha = {
+      url = "github:MystiaFin/suzuha";
+      flake = false;
+    };
     nixos-hardware.url = "github:NixOS/nixos-hardware";
     nvf.url = "github:notashelf/nvf";
     nvf-config = {
@@ -105,7 +113,10 @@
       (import ./home/tui/nixy/flake.nix args)
       {
         formatter.${system} = pkgs.alejandra;
-        packages.${system}.nvim = inputs.nvf-config.packages.${system}.nvim;
+        packages.${system} = {
+          nvim = inputs.nvf-config.packages.${system}.nvim;
+          suzuha = pkgs-unstable.callPackage ./nixos/packages/suzuha.nix {inherit inputs;};
+        };
         apps.${system}.nvim = inputs.nvf-config.apps.${system}.nvim;
         nixosConfigurations = {
           nixtop = import ./hosts/laptop/flake.nix args;

@@ -1,0 +1,198 @@
+--- a/cli/template/example/suzuha/main.rs
++++ b/cli/template/example/suzuha/main.rs
+@@ -55,6 +55,7 @@
+         .window_per_monitor(wallpaper::picker::view)
+         .lock(lock_screen::view)
+         .ipc("launcher", overlay::launcher::ipc)
++        .ipc("clipboard", overlay::launcher::clipboard_ipc)
+         .ipc("utility", overlay::utility::ipc)
+         .ipc("control", overlay::control_center::ipc)
+         .ipc("settings", settings::ipc)
+--- a/cli/template/example/suzuha/overlay/state.rs
++++ b/cli/template/example/suzuha/overlay/state.rs
+@@ -23,6 +23,7 @@
+     pub launcher: Panel,
+ 
+     pub query: String,
++    pub clipboard_mode: bool,
+ 
+     // the chosen result, and the first result the list shows
+     pub selected: usize,
+@@ -81,6 +82,7 @@
+             control_center: Panel::new(),
+             launcher: Panel::new(),
+             query: String::new(),
++            clipboard_mode: false,
+             selected: 0,
+             first: 0,
+             hovered_row: None,
+--- a/cli/template/example/suzuha/overlay/launcher/results.rs
++++ b/cli/template/example/suzuha/overlay/launcher/results.rs
+@@ -11,6 +11,9 @@
+ pub enum Kind {
+     // its place in Apps::list()
+     App(usize),
++
++    // Stable cliphist ID, never the potentially duplicated preview text.
++    Clipboard(String),
+ 
+     // opens the settings window, on its colors page for the color command
+     Settings,
+--- a/cli/template/example/suzuha/overlay/launcher.rs
++++ b/cli/template/example/suzuha/overlay/launcher.rs
+@@ -1,4 +1,5 @@
+ mod results;
++mod clipboard;
+ 
+ use std::cell::{Cell, RefCell};
+ 
+@@ -17,6 +18,14 @@
+ 
+ use results::{Entry, Kind};
+ 
++fn find_entries(overlay: &Overlay) -> Vec<Entry> {
++    if overlay.clipboard_mode {
++        clipboard::find(&overlay.query)
++    } else {
++        results::find(&overlay.query, &overlay.sessions)
++    }
++}
++
+ // the text input's name, which keeps what was typed between redraws
+ const INPUT: &str = "launcher";
+ 
+@@ -69,7 +78,7 @@
+         return None;
+     }
+ 
+-    let entries = results::find(&overlay.query, &overlay.sessions);
++    let entries = find_entries(&overlay);
+ 
+     let full_width = Settings::read().number("launcher_width").min(screen.width - 80.0);
+     let width = full_width * (CLOSED_WIDTH + (1.0 - CLOSED_WIDTH) * progress);
+@@ -162,7 +171,7 @@
+             TextInput::new(INPUT)
+                 .size(15.0)
+                 .color(theme.text)
+-                .placeholder("Type > for command palette...")
++                .placeholder(if overlay.clipboard_mode { "Search clipboard history…" } else { "Type > for command palette..." })
+                 .focused()
+                 .on_change(query_changed)
+                 .on_submit(|_| launch_selected()),
+@@ -192,7 +201,7 @@
+         .on_scroll(scrolled);
+ 
+     if entries.is_empty() {
+-        let empty = Text::new(results::empty_text(&overlay.query))
++        let empty = Text::new(if overlay.clipboard_mode { clipboard::empty_text() } else { results::empty_text(&overlay.query) })
+             .size(14.0)
+             .font(fonts::BODY)
+             .color(theme.secondary_text);
+@@ -354,22 +363,47 @@
+             search_tmux(&mut overlay);
+         }
+         "hide" => overlay.launcher.hide(),
+-        _ if overlay.launcher.shown => overlay.launcher.hide(),
++        _ if overlay.launcher.shown && !overlay.clipboard_mode => overlay.launcher.hide(),
+         _ => show(&mut overlay),
+     }
+ 
++    String::from("ok")
++}
++
++// The clipboard shares the launcher's search, keyboard handling and animations.
++pub fn clipboard_ipc(arguments: &[String]) -> String {
++    let command = arguments.first().map(String::as_str).unwrap_or("toggle");
++    let mut overlay = Overlay::write();
++    match command {
++        "hide" => {
++            if overlay.clipboard_mode {
++                overlay.launcher.hide();
++            }
++        }
++        "toggle" if overlay.launcher.shown && overlay.clipboard_mode => overlay.launcher.hide(),
++        "show" | "toggle" => {
++            show(&mut overlay);
++            overlay.clipboard_mode = true;
++            overlay.query.clear();
++            TextInput::set_text(INPUT, "");
++            clipboard::refresh();
++        }
++        _ => return String::from("Use clipboard show, hide or toggle"),
++    }
+     String::from("ok")
+ }
+ 
+ // opens at the top of the list, on an empty search unless the last one is remembered
+ fn show(overlay: &mut Overlay) {
++    let was_clipboard = overlay.clipboard_mode;
++    overlay.clipboard_mode = false;
+     overlay.power_menu.hide();
+     overlay.control_center.hide();
+     super::utility::close(overlay);
+     overlay.launcher.show();
+ 
+     // remembering keeps the last search, and the field still shows it
+-    if !Settings::read().flag("launcher_remember_query") {
++    if was_clipboard || !Settings::read().flag("launcher_remember_query") {
+         overlay.query.clear();
+ 
+         TextInput::set_text(INPUT, "");
+@@ -396,7 +430,7 @@
+         return;
+     }
+ 
+-    let count = results::find(&overlay.query, &overlay.sessions).len();
++    let count = find_entries(&overlay).len();
+ 
+     match key {
+         Key::Down if count > 0 => {
+@@ -412,7 +446,7 @@
+         }
+ 
+         // the first escape clears the search, the second closes
+-        Key::Escape if !overlay.query.is_empty() && Settings::read().flag("launcher_escape_clears") => {
++        Key::Escape if !overlay.clipboard_mode && !overlay.query.is_empty() && Settings::read().flag("launcher_escape_clears") => {
+             overlay.query.clear();
+ 
+             TextInput::set_text(INPUT, "");
+@@ -466,7 +500,7 @@
+     let mut overlay = Overlay::write();
+ 
+     // tmux sessions are listed once, when the search switches to them
+-    if query.starts_with('!') && !overlay.query.starts_with('!') {
++    if !overlay.clipboard_mode && query.starts_with('!') && !overlay.query.starts_with('!') {
+         overlay.sessions = results::read_sessions();
+     }
+ 
+@@ -479,7 +513,7 @@
+ fn scrolled(scroll: Scroll) {
+     let mut overlay = Overlay::write();
+ 
+-    let count = results::find(&overlay.query, &overlay.sessions).len();
++    let count = find_entries(&overlay).len();
+ 
+     let last_top = count.saturating_sub(ROWS_SHOWN.get());
+ 
+@@ -507,7 +541,7 @@
+ fn launch_selected() {
+     let mut overlay = Overlay::write();
+ 
+-    let entries = results::find(&overlay.query, &overlay.sessions);
++    let entries = find_entries(&overlay);
+ 
+     let Some(entry) = entries.get(overlay.selected) else {
+         return;
+@@ -516,6 +550,12 @@
+     let close = Settings::read().flag("launcher_close_on_launch");
+ 
+     match &entry.kind {
++        Kind::Clipboard(id) => {
++            let id = id.clone();
++            drop(overlay);
++            clipboard::copy(id);
++        }
++
+         Kind::App(index) => {
+             Apps::read().list()[*index].launch();
+ 

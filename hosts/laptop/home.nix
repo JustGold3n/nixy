@@ -9,8 +9,12 @@ in {
   imports =
     utils.importAll ../../home/tui
     ++ utils.importAll ../../home/gui
-    ++ utils.importAll ../../home/system # System (Desktop environment like stuff)
+    ++ (builtins.filter
+      (path: !(builtins.elem (baseNameOf path) ["hyprland" "hypridle" "hyprlock" "waybar" "swaync" "power"]))
+      (utils.importAll ../../home/system))
     ++ [
+      ../../home/system/niri.nix
+      ../../home/system/suzuha.nix
       inputs.nvf-config.homeManagerModules.default # My vim config
       #../../home/tui/git/signing.nix # CHANGEME: Change the key or remove this file
       ./variables.nix # Mostly user-specific configuration
@@ -42,18 +46,11 @@ in {
       ];
     };
 
-    sessionVariables = {
-      AQ_DRM_DEVICES = "/dev/dri/card2:/dev/dri/card1"; # CHANGEME: Related to the GPU
-    };
-
     # Don't touch this
     stateVersion = "26.05";
   };
 
-  wayland.windowManager.hyprland.settings.monitor = [
-    "eDP-2,highres,0x0,1" # My internal laptop screen
-    "desc:AOC U34G2G1 0x00000E06,3440x1440@99.98,auto,1" # My external monitor
-  ];
+  disabledModules = [../../home/system/tofi/desktop-actions.nix];
 
   programs = {
     home-manager.enable = true;
