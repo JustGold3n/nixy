@@ -59,7 +59,6 @@ fn show_menu(item: Item, monitor: String, parents: Vec<i32>) {
         let rows = tray::menu(&item, parent);
         let mut state = Popup::write();
         if state.generation != generation {
-            state.quiet();
             return;
         }
         state.loading = false;
@@ -88,7 +87,6 @@ fn hover(key: String, inside: bool) {
     } else if state.hover == key {
         state.hover.clear();
     } else {
-        state.quiet();
     }
 }
 fn image(item: &Item, theme: &Theme) -> Rectangle {

@@ -120,9 +120,9 @@
     "semantic_hash": ""
   },
   "nixos/packages/suzuha-tray.rs": {
-    "mtime": 1792933940.8660326,
-    "seen": 1792933959.0681808,
-    "ast_hash": "455b82f197bf145c29a9b903783294d6",
+    "mtime": 1792934011.843909,
+    "seen": 1792934092.5918992,
+    "ast_hash": "755b364b66f05a0f40923632a2da248a",
     "semantic_hash": ""
   }
 }

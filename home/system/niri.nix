@@ -188,7 +188,6 @@ in {
     }
     window-rule {
       match app-id=r#"^(org\.keepassxc\.KeePassXC|keepassxc)$"#
-      open-on-workspace "2"
       open-focused false
     }
     window-rule {

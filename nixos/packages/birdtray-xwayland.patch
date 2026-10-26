@@ -1,0 +1,24 @@
+--- a/src/windowtools_x11.cpp
++++ b/src/windowtools_x11.cpp
+@@ -509,6 +509,21 @@ void WindowTools_X11::timerWindowState()
+         return;
+     }
+ 
++    // Thunderbird may remap its main window while restoring its session,
++    // after the initial hide. Preserve the user's hidden state on Xwayland.
++    // show() resets mHiddenStateCounter, so explicit tray/CLI reveals still work.
++    if (mHiddenStateCounter == 2 && isValid())
++    {
++        XWindowAttributes attributes;
++        if (XGetWindowAttributes(QX11Info::display(), mWinId, &attributes)
++            && attributes.map_state == IsViewable)
++        {
++            mHiddenStateCounter = 0;
++            hide();
++            return;
++        }
++    }
++
+     // _NET_WM_STATE_HIDDEN is set for minimized windows, so if we see it, this means it was minimized by the user
+     if ( checkWindowState( QX11Info::display(), mWinId, "_NET_WM_STATE_HIDDEN" ) && mHiddenStateCounter == 0 )
+     {

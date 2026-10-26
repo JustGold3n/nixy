@@ -1,12 +1,12 @@
 # Graph Report - nixos  (2026-10-25)
 
 ## Corpus Check
-- 14 files · ~181,270 words
+- 14 files · ~181,293 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 162 file(s) not represented in the graph (top: .nix 153, .patch 4, .lock 2)
 
 ## Summary
-- 229 nodes · 384 edges · 15 communities (12 shown, 3 thin omitted)
+- 230 nodes · 387 edges · 15 communities (12 shown, 3 thin omitted)
 - Extraction: 96% EXTRACTED · 4% INFERRED · 0% AMBIGUOUS · INFERRED: 17 edges (avg confidence: 0.9)
 - Token cost: 0 input · 0 output
 
@@ -33,7 +33,7 @@
 - WATCHER
 
 ## God Nodes (most connected - your core abstractions)
-1. `Popup` - 13 edges
+1. `Popup` - 14 edges
 2. `main()` - 10 edges
 3. `WATCHER` - 10 edges
 4. `call()` - 10 edges
@@ -106,7 +106,7 @@ Nodes (13): CLIPHIST, copy(), Database, decode(), duplicate_previews_keep_distin
 
 ### Community 12 - "suzuha-tray.rs"
 Cohesion: 0.08
-Nodes (13): Item, click(), close(), dismiss(), hover(), icon(), icons(), image() (+5 more)
+Nodes (14): Item, click(), close(), dismiss(), hover(), icon(), icons(), image() (+6 more)
 
 ### Community 13 - "amane-tray.rs"
 Cohesion: 0.10
@@ -127,9 +127,9 @@ _Questions this graph is uniquely positioned to answer:_
 - **Should `suzuha-clipboard.rs` be split into smaller, more focused modules?**
   _Cohesion score 0.1103448275862069 - nodes in this community are weakly interconnected._
 - **Why does `MenuEntry` connect `amane-tray.rs` to `suzuha-tray.rs`?**
-  _High betweenness centrality (0.050) - this node is a cross-community bridge._
+  _High betweenness centrality (0.051) - this node is a cross-community bridge._
 - **Should `suzuha-tray.rs` be split into smaller, more focused modules?**
-  _Cohesion score 0.0782608695652174 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.07770582793709528 - nodes in this community are weakly interconnected._
 - **Why does `icons()` connect `suzuha-tray.rs` to `amane-tray.rs`?**
   _High betweenness centrality (0.050) - this node is a cross-community bridge._
 - **Should `amane-tray.rs` be split into smaller, more focused modules?**

@@ -40,4 +40,14 @@ in {
     };
     Install.WantedBy = ["niri.service"];
   };
+
+  systemd.user.targets.amane-tray = {
+    Unit = {
+      Description = "Applications in the Amane system tray";
+      Wants = ["suzuha.service"];
+      After = ["suzuha.service"];
+      PartOf = ["graphical-session.target"];
+    };
+    Install.WantedBy = ["niri.service"];
+  };
 }

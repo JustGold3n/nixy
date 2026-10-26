@@ -76,51 +76,69 @@
     ${pkgs.coreutils}/bin/mv "$temporary" "$settings"
     trap - EXIT
   '';
-  # Niri has no minimize action. Keep Thunderbird's main window unmapped via
-  # Xwayland so mail checking continues without occupying a workspace.
-  thunderbirdWindow = pkgs.writeShellApplication {
-    name = "thunderbird-window";
-    runtimeInputs = [pkgs.coreutils pkgs.systemd pkgs.xdotool];
-    text = ''
-      visibility=()
-      case "''${1:-}" in
-        hide) action=windowunmap; visibility=(--onlyvisible) ;;
-        show) action=windowmap ;;
-        *) echo "Usage: thunderbird-window hide|show" >&2; exit 2 ;;
-      esac
-      for _ in $(seq 1 200); do
-        main_pid="$(systemctl --user show thunderbird.service -p MainPID --value)"
-        if [[ "$main_pid" != 0 ]]; then
-          # The X11 window exists before Thunderbird maps it during startup.
-          # Wait for that first map before hiding, otherwise it reappears.
-          window="$(xdotool search --all --limit 1 "''${visibility[@]}" --pid "$main_pid" --role '^3pane$' || true)"
-          if [[ -n "$window" ]]; then
-            if [[ "$action" == windowunmap ]]; then
-              # Thunderbird maps the main window again while restoring tabs.
-              # Keep it hidden through startup; the launcher waits for this
-              # ExecStartPost to finish before deliberately showing it.
-              for _ in $(seq 1 25); do
-                timeout 5 xdotool windowunmap --sync "$window"
-                sleep 0.2
-              done
-              exit 0
-            fi
-            exec timeout 5 xdotool "$action" --sync "$window"
-          fi
-        fi
-        sleep 0.1
-      done
-      echo "Thunderbird's main window did not appear" >&2
-      exit 1
-    '';
-  };
+  trayStartupTarget =
+    if useNiri
+    then "amane-tray.target"
+    else "graphical-session.target";
+  waitForTray = pkgs.writeShellScript "wait-for-amane-tray" ''
+    for ((attempt = 0; attempt < 150; attempt++)); do
+      if [[ "$(${pkgs.systemd}/bin/busctl --user --timeout=1 get-property \
+          org.kde.StatusNotifierWatcher /StatusNotifierWatcher \
+          org.kde.StatusNotifierWatcher IsStatusNotifierHostRegistered 2>/dev/null)" == "b true" ]]; then
+        exit 0
+      fi
+      ${pkgs.coreutils}/bin/sleep 0.2
+    done
+    echo "Amane's system tray did not become ready" >&2
+    exit 1
+  '';
+  birdtraySettings = "${config.xdg.configHome}/birdtray-config.json";
+  birdtray = pkgs.birdtray.overrideAttrs (old: {
+    patches = (old.patches or []) ++ [../../../nixos/packages/birdtray-xwayland.patch];
+  });
+  birdtrayDefaults = pkgs.writeText "birdtray-startup.json" (builtins.toJSON {
+    "common/showhidethunderbird" = true;
+    "common/launchthunderbird" = true;
+    "common/hidewhenminimized" = true;
+    "common/exitthunderbirdonquit" = true;
+    "common/monitorthunderbirdwindow" = true;
+    "common/restartthunderbird" = false;
+    "common/hidewhenstarted" = true;
+    "common/hidewhenrestarted" = true;
+    "common/startClosedThunderbird" = true;
+    "common/hideWhenStartedManually" = false;
+    "common/showDialogIfNoAccountsConfigured" = false;
+    "common/showunreademailcount" = false;
+    "advanced/tbcmdline" = ["${config.programs.thunderbird.finalPackage}/bin/thunderbird" "-mail"];
+    "advanced/tbwindowmatch" = "Mozilla Thunderbird";
+    "advanced/tbprocessname" = "thunderbird";
+    "advanced/updateOnStartup" = false;
+    "advanced/onlyShowIconOnUnreadMessages" = false;
+    "advanced/notificationfontminsize" = 4;
+    "advanced/notificationfontmaxsize" = 512;
+    "advanced/watchfiletimeout" = 150;
+    "advanced/unreadopacitylevel" = 0.75;
+  });
+  configureBirdtray = pkgs.writeShellScript "birdtray-configure" ''
+    set -eu
+    umask 077
+    settings=${lib.escapeShellArg birdtraySettings}
+    ${pkgs.coreutils}/bin/mkdir -p "$(dirname "$settings")"
+    if [[ ! -e "$settings" ]]; then
+      printf '{}\n' > "$settings"
+    fi
+    temporary="$(${pkgs.coreutils}/bin/mktemp "$settings.XXXXXX")"
+    trap '${pkgs.coreutils}/bin/rm -f "$temporary"' EXIT
+    ${lib.getExe pkgs.jq} -s '.[0] * .[1]' "$settings" ${birdtrayDefaults} > "$temporary"
+    ${pkgs.coreutils}/bin/mv "$temporary" "$settings"
+    trap - EXIT
+  '';
   mkSpecialWorkspaceLauncher = {
     name,
     service,
     workspace,
     windowClass,
     executable,
-    revealCommand ? "",
   }:
     pkgs.writeShellApplication {
       inherit name;
@@ -137,85 +155,86 @@
       text =
         ''
           systemctl --user start ${service}.service
-          ${revealCommand}
         ''
-        + (
-          if useNiri
-          then ''
-            find_client() {
-              ${osConfig.programs.niri.package}/bin/niri msg --json windows \
-                | ${lib.getExe pkgs.jq} -r --arg class ${lib.escapeShellArg windowClass} \
-                  'first(.[] | select((.app_id // "" | ascii_downcase) == ($class | ascii_downcase)) | .id) // empty'
-            }
-            client_id="$(find_client)"
-            if (( $# > 0 )) || [[ -z "$client_id" ]]; then
-              ${executable} "$@" >/dev/null 2>&1 &
+        + ''
+          find_client() {
+            ${pkgs.hyprland}/bin/hyprctl -j clients \
+              | ${lib.getExe pkgs.jq} -r --arg class ${lib.escapeShellArg windowClass} \
+                'first(.[] | select(.class == $class) | .address) // empty'
+          }
+
+          client_address="$(find_client)"
+
+          # Both applications are single-instance. Ask the service-owned process
+          # to map a minimized window, or forward a URI/file argument. Do this in
+          # the background so a failed single-instance handoff cannot block the
+          # launcher before it reveals the special workspace.
+          if (( $# > 0 )) || [[ -z "$client_address" ]]; then
+            ${executable} "$@" >/dev/null 2>&1 &
+          fi
+
+          for _ in $(seq 1 50); do
+            client_address="$(find_client)"
+            if [[ -n "$client_address" ]]; then
+              break
             fi
-            for _ in $(seq 1 50); do
-              client_id="$(find_client)"
-              if [[ -n "$client_id" ]]; then
-                exec ${osConfig.programs.niri.package}/bin/niri msg action focus-window --id "$client_id"
-              fi
-              sleep 0.1
-            done
+            sleep 0.1
+          done
+
+          if [[ -z "$client_address" ]]; then
             echo "${service} started, but its window did not appear" >&2
             exit 1
-          ''
-          else ''
-            find_client() {
-              ${pkgs.hyprland}/bin/hyprctl -j clients \
-                | ${lib.getExe pkgs.jq} -r --arg class ${lib.escapeShellArg windowClass} \
-                  'first(.[] | select(.class == $class) | .address) // empty'
-            }
+          fi
 
-            client_address="$(find_client)"
+          if ! ${pkgs.hyprland}/bin/hyprctl -j monitors \
+            | ${lib.getExe pkgs.jq} -e --arg workspace ${lib.escapeShellArg "special:${workspace}"} \
+              'any(.[]; .specialWorkspace.name == $workspace)' >/dev/null; then
+            ${pkgs.hyprland}/bin/hyprctl dispatch togglespecialworkspace ${lib.escapeShellArg workspace} >/dev/null
+          fi
 
-            # Both applications are single-instance. Ask the service-owned process
-            # to map a minimized window, or forward a URI/file argument. Do this in
-            # the background so a failed single-instance handoff cannot block the
-            # launcher before it reveals the special workspace.
-            if (( $# > 0 )) || [[ -z "$client_address" ]]; then
-              ${executable} "$@" >/dev/null 2>&1 &
-            fi
-
-            for _ in $(seq 1 50); do
-              client_address="$(find_client)"
-              if [[ -n "$client_address" ]]; then
-                break
-              fi
-              sleep 0.1
-            done
-
-            if [[ -z "$client_address" ]]; then
-              echo "${service} started, but its window did not appear" >&2
-              exit 1
-            fi
-
-            if ! ${pkgs.hyprland}/bin/hyprctl -j monitors \
-              | ${lib.getExe pkgs.jq} -e --arg workspace ${lib.escapeShellArg "special:${workspace}"} \
-                'any(.[]; .specialWorkspace.name == $workspace)' >/dev/null; then
-              ${pkgs.hyprland}/bin/hyprctl dispatch togglespecialworkspace ${lib.escapeShellArg workspace} >/dev/null
-            fi
-
-            ${pkgs.hyprland}/bin/hyprctl dispatch focuswindow "address:$client_address" >/dev/null
-          ''
-        );
+          ${pkgs.hyprland}/bin/hyprctl dispatch focuswindow "address:$client_address" >/dev/null
+        '';
     };
-  openKeePassXC = mkSpecialWorkspaceLauncher {
-    name = "open-keepassxc";
-    service = "keepassxc";
-    workspace = "keepass";
-    windowClass = "org.keepassxc.KeePassXC";
-    executable = "${pkgs.keepassxc}/bin/keepassxc";
-  };
-  openThunderbird = mkSpecialWorkspaceLauncher {
-    name = "open-thunderbird";
-    service = "thunderbird";
-    workspace = "mail";
-    windowClass = "thunderbird";
-    executable = "${config.programs.thunderbird.finalPackage}/bin/thunderbird";
-    revealCommand = lib.optionalString useNiri "${lib.getExe thunderbirdWindow} show";
-  };
+  openKeePassXC =
+    if useNiri
+    then
+      pkgs.writeShellApplication {
+        name = "open-keepassxc";
+        text = ''
+          exec ${pkgs.keepassxc}/bin/keepassxc "$@"
+        '';
+      }
+    else
+      mkSpecialWorkspaceLauncher {
+        name = "open-keepassxc";
+        service = "keepassxc";
+        workspace = "keepass";
+        windowClass = "org.keepassxc.KeePassXC";
+        executable = "${pkgs.keepassxc}/bin/keepassxc";
+      };
+  openThunderbird =
+    if useNiri
+    then
+      pkgs.writeShellApplication {
+        name = "open-thunderbird";
+        runtimeInputs = [pkgs.systemd];
+        text = ''
+          systemctl --user start thunderbird.service
+          export MOZ_ENABLE_WAYLAND=0 GDK_BACKEND=x11 QT_QPA_PLATFORM=xcb
+          if (( $# > 0 )); then
+            ${config.programs.thunderbird.finalPackage}/bin/thunderbird "$@" &
+          fi
+          exec ${birdtray}/bin/birdtray --show-tb
+        '';
+      }
+    else
+      mkSpecialWorkspaceLauncher {
+        name = "open-thunderbird";
+        service = "thunderbird";
+        workspace = "mail";
+        windowClass = "thunderbird";
+        executable = "${config.programs.thunderbird.finalPackage}/bin/thunderbird";
+      };
 in {
   home.packages =
     (with pkgs; [
@@ -234,7 +253,8 @@ in {
       thunar
       gnome-text-editor
     ])
-    ++ lib.optional (!isNixtop) pkgs.thunderbird;
+    ++ lib.optional (!isNixtop) pkgs.thunderbird
+    ++ lib.optional (isNixtop && useNiri) birdtray;
 
   home.persistence."/persist" = lib.mkIf (config.var.impermanenceEnabled or false) {
     directories = [
@@ -342,35 +362,40 @@ in {
     keepassxc = {
       Unit = {
         Description = "KeePassXC unlocked from the age-encrypted SOPS secret";
-        After = ["graphical-session.target"];
-        PartOf = ["graphical-session.target"];
-      };
-      Service = {
-        Type = "exec";
-        ExecStartPre = "${configureKeePassXC}";
-        ExecStart = "${startKeePassXC}";
-        Restart = "on-failure";
-        RestartSec = 5;
-      };
-      Install.WantedBy = ["graphical-session.target"];
-    };
-
-    thunderbird = {
-      Unit = {
-        Description = "Thunderbird background mail client";
         After = ["graphical-session.target" notificationService];
         Wants = [notificationService];
         PartOf = ["graphical-session.target"];
       };
       Service = {
         Type = "exec";
-        ExecStart = "${config.programs.thunderbird.finalPackage}/bin/thunderbird -mail";
-        Environment = lib.optionals useNiri ["MOZ_ENABLE_WAYLAND=0" "GDK_BACKEND=x11"];
-        ExecStartPost = lib.optionalString useNiri "${lib.getExe thunderbirdWindow} hide";
-        Restart = "always";
+        ExecStartPre = lib.optional useNiri "${waitForTray}" ++ ["${configureKeePassXC}"];
+        ExecStart = "${startKeePassXC}";
+        Restart = "on-failure";
         RestartSec = 5;
       };
-      Install.WantedBy = ["graphical-session.target"];
+      Install.WantedBy = [trayStartupTarget];
+    };
+
+    thunderbird = {
+      Unit = {
+        Description = "Thunderbird background mail client with tray controls";
+        After = ["graphical-session.target" notificationService];
+        Wants = [notificationService];
+        PartOf = ["graphical-session.target"];
+      };
+      Service = {
+        Type = "exec";
+        ExecStartPre = lib.optionals useNiri ["${waitForTray}" "${configureBirdtray}"];
+        ExecStart =
+          if useNiri
+          then "${birdtray}/bin/birdtray"
+          else "${config.programs.thunderbird.finalPackage}/bin/thunderbird -mail";
+        # Birdtray controls Thunderbird's Xwayland window through X11.
+        Environment = lib.optionals useNiri ["MOZ_ENABLE_WAYLAND=0" "GDK_BACKEND=x11" "QT_QPA_PLATFORM=xcb"];
+        Restart = "on-failure";
+        RestartSec = 5;
+      };
+      Install.WantedBy = [trayStartupTarget];
     };
 
     legcord = {
@@ -382,12 +407,12 @@ in {
       };
       Service = {
         Type = "exec";
-        ExecStartPre = "${configureLegcord}";
+        ExecStartPre = lib.optional useNiri "${waitForTray}" ++ ["${configureLegcord}"];
         ExecStart = "${lib.getExe pkgs.legcord}";
         Restart = "on-failure";
         RestartSec = 5;
       };
-      Install.WantedBy = ["graphical-session.target"];
+      Install.WantedBy = [trayStartupTarget];
     };
   };
 }

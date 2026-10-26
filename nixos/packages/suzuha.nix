@@ -70,7 +70,7 @@ in
       cargo test --offline --release --target ${pkgs.stdenv.hostPlatform.rust.rustcTarget} -p amane --lib services::pam::tests
       cargo test --offline --release --target ${pkgs.stdenv.hostPlatform.rust.rustcTarget} -p amane --lib services::lock::fingerprint::tests
       cargo test --offline --release --target ${pkgs.stdenv.hostPlatform.rust.rustcTarget} -p amane-example --bin amane-example overlay::launcher::clipboard::tests
-      ${pkgs.dbus}/bin/dbus-run-session -- cargo test --offline --release --target ${pkgs.stdenv.hostPlatform.rust.rustcTarget} -p amane --lib tray::tests
+      ${pkgs.dbus}/bin/dbus-run-session --dbus-daemon=${pkgs.dbus}/bin/dbus-daemon --config-file=${pkgs.dbus}/share/dbus-1/session.conf -- cargo test --offline --release --target ${pkgs.stdenv.hostPlatform.rust.rustcTarget} -p amane --lib tray::tests
       runHook postCheck
     '';
     postInstall =
