@@ -17,8 +17,7 @@
       OSD_TEXT="󰦝  VPN On"
     fi
 
-    printf '%s' "$OSD_TEXT" > /tmp/waybar-osd
-    ${pkgs.procps}/bin/pkill -f -RTMIN+8 '^waybar$' 2>/dev/null || true
+    ${pkgs.libnotify}/bin/notify-send --app-name=VPN --icon=network-vpn-symbolic "$OSD_TEXT"
   '';
 in {
   environment.systemPackages = [

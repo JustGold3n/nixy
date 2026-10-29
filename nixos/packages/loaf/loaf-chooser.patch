@@ -1,0 +1,220 @@
+--- a/cpp/loaf/native.h
++++ b/cpp/loaf/native.h
+@@ -20,8 +20,12 @@
+     Q_PROPERTY(QString startupMode READ startupMode CONSTANT)
+     // True when started through "Open as Administrator".
+     Q_PROPERTY(bool isAdmin READ isAdmin CONSTANT)
++    Q_PROPERTY(QVariantMap chooser READ chooser CONSTANT)
+ public:
+     explicit LoafNative(QObject *parent = nullptr);
++
++    QVariantMap chooser() const;
++    Q_INVOKABLE QString acceptChoice(const QStringList &paths);
+ 
+     // ---- clipboard (interoperable with Nautilus, Dolphin, ...) ----------
+     // Puts files on the system clipboard (x-special/gnome-copied-files,
+@@ -54,6 +58,9 @@
+ 
+ private:
+     QVariantMap readClipboard() const;
++
++    QVariantMap m_chooser;
++    QString m_chooserOutput;
+ 
+     QStringList m_pending;
+     QString m_mode = QStringLiteral("tab");
+--- a/cpp/native.cpp
++++ b/cpp/native.cpp
+@@ -8,6 +8,8 @@
+ #include <QDBusInterface>
+ #include <QDBusReply>
+ #include <QFileInfo>
++#include <QDir>
++#include <QSaveFile>
+ #include <QGuiApplication>
+ #include <QLocale>
+ #include <QMimeData>
+@@ -19,6 +21,42 @@
+ 
+ namespace loaf {
+ 
++// Private interface used by the desktop portal wrapper. Normal Loaf windows
++// have no chooser output and retain their usual behaviour.
++QVariantMap LoafNative::chooser() const
++{
++    return m_chooser;
++}
++
++QString LoafNative::acceptChoice(const QStringList &paths)
++{
++    const auto options = chooser();
++    if (!options.value("enabled").toBool())
++        return tr("This window is not a file picker.");
++    const bool save = options.value("save").toBool();
++    const bool directory = options.value("directory").toBool();
++    if (paths.isEmpty() || ((!options.value("multiple").toBool() || save) && paths.size() != 1))
++        return tr("Select %1.").arg(directory ? tr("one folder") : tr("one file"));
++    QByteArray result;
++    for (const QString &path : paths) {
++        QFileInfo info(path);
++        if (!info.isAbsolute() || path.contains('\n') || path.contains('\r'))
++            return tr("Select a local path without line breaks.");
++        if (save) {
++            if (info.isDir() || !info.dir().exists() || info.fileName().isEmpty())
++                return tr("Choose a file name in an existing folder.");
++        } else if (!info.exists() || (directory ? !info.isDir() : !info.isFile())) {
++            return directory ? tr("Select folders only.") : tr("Select files only.");
++        }
++        result += QDir::cleanPath(path).toUtf8() + '\n';
++    }
++    QSaveFile output(m_chooserOutput);
++    if (!output.open(QIODevice::WriteOnly) || output.write(result) != result.size() || !output.commit())
++        return tr("Could not return the selection: %1").arg(output.errorString());
++    QCoreApplication::quit();
++    return {};
++}
++
+ static const char *kService = "io.github.m_uvex.Loaf";
+ static const char *kPath = "/io/github/m_uvex/Loaf";
+ 
+@@ -50,6 +88,17 @@
+ LoafNative::LoafNative(QObject *parent)
+     : QObject(parent)
+ {
++    m_chooserOutput = qEnvironmentVariable("LOAF_CHOOSER_OUTPUT");
++    m_chooser = {{"enabled", !m_chooserOutput.isEmpty()},
++                 {"multiple", qEnvironmentVariable("LOAF_CHOOSER_MULTIPLE") == "1"},
++                 {"directory", qEnvironmentVariable("LOAF_CHOOSER_DIRECTORY") == "1"},
++                 {"save", qEnvironmentVariable("LOAF_CHOOSER_SAVE") == "1"},
++                 {"name", qEnvironmentVariable("LOAF_CHOOSER_NAME")}};
++    // New windows, terminals and applications opened from the picker must not
++    // inherit its output file or accidentally complete the same portal request.
++    for (const char *name : {"LOAF_CHOOSER_OUTPUT", "LOAF_CHOOSER_MULTIPLE",
++                             "LOAF_CHOOSER_DIRECTORY", "LOAF_CHOOSER_SAVE", "LOAF_CHOOSER_NAME"})
++        qunsetenv(name);
+     if (QClipboard *cb = QGuiApplication::clipboard()) {
+         // Parse once per change: reading another app's clipboard can block,
+         // so menus must never do it synchronously.
+--- a/qml/main.qml
++++ b/qml/main.qml
+@@ -16,6 +16,69 @@
+         : (engine.is_searching_everywhere ? qsTr("Search") : engine.current_dir_name))
+     color: theme.background
+ 
++    readonly property var chooser: native.chooser
++
++    function finishChoice(paths) {
++        var error = native.acceptChoice(paths);
++        if (error.length > 0)
++            toast("error", error);
++    }
++
++    function acceptChoice() {
++        if (chooser.save) {
++            var name = chooserName.text;
++            if (!name || name === "." || name === ".." || name.indexOf("/") !== -1) {
++                toast("error", qsTr("Enter a file name without slashes."));
++                return;
++            }
++            var path = engine.current_path + "/" + name;
++            var info = JSON.parse(core.get_item_info(path) || "{}");
++            if (info.exists) {
++                confirmDialog.ask(qsTr("Replace existing file?"), path, qsTr("Replace"), function() {
++                    window.finishChoice([path]);
++                });
++            } else {
++                finishChoice([path]);
++            }
++        } else {
++            var paths = selectedPaths();
++            if (chooser.directory && paths.length === 0)
++                paths = [engine.current_path];
++            finishChoice(paths);
++        }
++    }
++
++    footer: Rectangle {
++        visible: window.chooser.enabled
++        height: visible ? 64 : 0
++        color: theme.surfaceContainer
++        RowLayout {
++            anchors.fill: parent
++            anchors.margins: 12
++            Label {
++                visible: !window.chooser.save
++                text: window.chooser.directory ? qsTr("Select a folder")
++                    : window.chooser.multiple ? qsTr("Select files") : qsTr("Select a file")
++                color: theme.textMain
++                Layout.fillWidth: true
++            }
++            TextField {
++                id: chooserName
++                visible: window.chooser.save
++                text: window.chooser.name
++                placeholderText: qsTr("File name")
++                Layout.fillWidth: true
++                onAccepted: window.acceptChoice()
++                Keys.onEscapePressed: window.close()
++            }
++            Button { text: qsTr("Cancel"); onClicked: window.close() }
++            Button {
++                text: window.chooser.save ? qsTr("Save") : qsTr("Select")
++                onClicked: window.acceptChoice()
++            }
++        }
++    }
++
+     // Mirror the whole layout for right-to-left languages.
+     LayoutMirroring.enabled: Qt.application.layoutDirection === Qt.RightToLeft
+     LayoutMirroring.childrenInherit: true
+@@ -136,6 +199,11 @@
+         if (item.is_dir) {
+             pane.engine.set_path(item.path);
+             showFiles();
++        } else if (chooser.enabled) {
++            if (chooser.save)
++                chooserName.text = item.path.substring(item.path.lastIndexOf("/") + 1);
++            else
++                finishChoice([item.path]);
+         } else if (pane.engine.location_kind === "trash") {
+             quickLook.showFor(item.path);
+         } else if (theme.browseArchives && core.is_archive_file(item.path)) {
+@@ -527,12 +595,12 @@
+         window.requestActivate();
+     }
+ 
+-    onClosing: saveSession()
++    onClosing: if (!chooser.enabled) saveSession()
+ 
+     Component.onCompleted: {
+         refreshCutSet();
+         var pending = native.takePendingOpen();
+-        var restored = restoreSession(pending.length > 0);
++        var restored = !chooser.enabled && restoreSession(pending.length > 0);
+         if (native.startupMode === "mini") {
+             sidebar.expanded = false;
+             theme.zoomIndex = 1;
+@@ -650,7 +718,9 @@
+             if (window.anyModalOpen)
+                 return;
+             if (event.key === Qt.Key_Escape) {
+-                if (window.activePane.selectedCount > 0) {
++                if (chooser.enabled) {
++                    window.close();
++                } else if (window.activePane.selectedCount > 0) {
+                     window.activePane.clearSelection();
+                 } else if (engine.is_searching_everywhere) {
+                     engine.clear_search();
+--- a/qml/FilePane.qml
++++ b/qml/FilePane.qml
+@@ -281,6 +281,10 @@
+ 
+     function openSelected() {
+         var items = selectedItems();
++        if (window.chooser.enabled && items.length > 1) {
++            window.acceptChoice();
++            return;
++        }
+         if (items.length === 1) {
+             window.openItem(pane, items[0]);
+         } else if (items.length > 1) {

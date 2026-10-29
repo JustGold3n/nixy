@@ -1,11 +1,28 @@
-# Foot is the default Wayland terminal; Stylix supplies its fonts and colors.
-{...}: {
+# Foot is the default Wayland terminal; Stylix supplies fonts, Suzuha supplies colors.
+{
+  lib,
+  pkgs,
+  ...
+}: let
+  glass = (pkgs.formats.ini {}).generate "foot-glass.ini" {
+    colors-dark = {
+      alpha = 0.92;
+      blur = true;
+    };
+    colors-light = {
+      alpha = 0.92;
+      blur = true;
+    };
+  };
+in {
   home.sessionVariables.TERMINAL = "foot";
 
   programs.foot = {
     enable = true;
     settings = {
       main = {
+        # Apply opacity after the dynamic palette, which supplies its own alpha.
+        include = lib.mkAfter ["${glass}"];
         term = "foot";
         pad = "10x10";
         selection-target = "both";

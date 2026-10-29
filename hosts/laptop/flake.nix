@@ -20,7 +20,9 @@ nixpkgs.lib.nixosSystem {
     inputs.impermanence.nixosModules.impermanence
     inputs.disko.nixosModules.disko
     inputs.lanzaboote.nixosModules.lanzaboote
-    #    ./disko.nix
+    # Prepared for root-only impermanence. Migrate /persist to a subvolume
+    # and remove the storage declarations in hardware-configuration.nix first.
+    # ./disko.nix
     ./configuration.nix
   ];
 }

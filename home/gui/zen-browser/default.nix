@@ -241,6 +241,7 @@ in {
 
         # Portable preferences only: omit account IDs, sessions, timestamps and migrations.
         settings = {
+          "widget.use-xdg-desktop-portal.file-picker" = 1;
           "browser.startup.homepage" = startpage;
           "browser.startup.page" = 3;
           "browser.toolbars.bookmarks.visibility" = "never";
@@ -291,6 +292,7 @@ in {
           "extensions.activeThemeID" = "firefox-compact-dark@mozilla.org";
           "extensions.pictureinpicture.enable_picture_in_picture_overrides" = true;
           "zen.library.media.enabled" = true;
+          "zen.theme.hide-unified-extensions-button" = false;
 
           # New-tab preferences.
           "browser.newtabpage.activity-stream.asrouter.userprefs.cfr.addons" = true;

@@ -23,7 +23,7 @@
 </div>
 <br>
 
-**Nixy simplifies and unifies** the Hyprland ecosystem with a minimalist,
+**Nixy combines** Niri and the Suzuha desktop shell with a minimalist,
 modular & easily customizable setup, heavily focused on TUIs. It provides a
 structured way to manage your system configuration and dotfiles with minimal
 effort. It includes _home-manager_, _secrets_, and _custom theming_ all in
@@ -31,9 +31,9 @@ one place.
 
 **Features:**
 
-- 💻 Hyprland & TUIs: Preconfigured Hyprland ecosystem with a lot of cool TUIs
+- 💻 Niri & TUIs: Preconfigured Niri desktop with the Suzuha shell and terminal apps
 - 🎨 Consistent Theming: Base16 & Stylix-powered themes
-- ⌨️ Vim-like Everywhere: Unified keybindings (Hyprland, nvim, vimium, etc.)
+- ⌨️ Vim-like Everywhere: Unified keybindings (Niri, nvim, vimium, etc.)
 - 🔒 Hardened by Default: LUKS encryption, sops-nix secrets, impermanence and more
 
 ## Table of Content
@@ -67,13 +67,26 @@ Contains **dotfiles and settings** that apply to your user environment.
 
 **Subfolders:**
 
-- `programs` is a collection of apps configured with home-manager
-- `system` is some "desktop environment" configuration
+- `gui/` contains graphical applications configured with Home Manager.
+- `tui/` contains terminal applications, shells, and the `nixy` CLI.
+- `system/` contains desktop integration, notifications, and session services.
+- `nvf/` contains the standalone Neovim configuration flake.
+- `lib/` contains shared helpers and browser start-page definitions.
+
+Application modules use a `default.nix` entry point. The host's `home.nix`
+selects modules; `home/lib/utils.nix` provides directory-based imports.
+Each configured application keeps its settings, startup services, and persistence
+in its own directory; `gui/pkgs/` holds the remaining package list.
 
 ### 🐧 /nixos
 
 Those are the system-level configurations. (audio, bluetooth, gpu, bootloader,
 ...)
+
+Custom package definitions live in `nixos/packages/<package>/default.nix`,
+alongside their patches, source files, and package-specific regression tests.
+System and Home Manager modules consume these definitions rather than keeping
+package overrides inline.
 
 ### 🎨 /themes
 
@@ -90,9 +103,16 @@ This directory contains host-specific configurations. Each host includes:
 - `variables.nix` for global variables
 - `secrets/` for sensitive data
 
+The primary `nixtop` flake output uses `hosts/laptop/`.
+Keep personal host configuration and decrypted secrets out of commits.
+
 ### 🖥️ /server-modules
 
 This folder contains server-related nixos modules. (gitea, cloudflared, self-hosted apps, ...)
+
+Project documentation belongs in `docs/`; maintenance scripts and README assets
+live under `.github/`. `graphify-out/` holds the current knowledge graph.
+Its caches and dated backups remain local and are ignored by Git.
 
 ## Installation
 
@@ -119,8 +139,8 @@ git clone https://github.com/anotherhadi/nixy ~/.config/nixos
 > ```
 
 > [!TIP]
-> When you add new files, don't forget to run `git add .` to add them to the git
-> repository
+> When you add new files, run `git add <paths>` for the intended files so Nix can
+> include them in the flake.
 
 5. Build the system
 
@@ -145,4 +165,4 @@ sudo nixos-rebuild switch --flake ~/.config/nixos#yourhostname
   <a href="https://github.com/anotherhadi/nixy">github</a> |
   <a href="https://gitlab.com/anotherhadi_mirror/nixy">gitlab (mirror)</a> |
   <a href="https://git.hadi.icu/anotherhadi/nixy">gitea (mirror)</a>
-</div
+</div>

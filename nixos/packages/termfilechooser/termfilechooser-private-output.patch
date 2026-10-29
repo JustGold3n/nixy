@@ -1,0 +1,63 @@
+--- a/src/filechooser/filechooser.c
++++ b/src/filechooser/filechooser.c
+@@ -53,11 +53,23 @@
+         path = "";
+     }
+ 
+-    uid_t uid = getuid();
+-    size_t filename_size =
+-        1 + snprintf(NULL, 0, "%s-%u.portal", PATH_PORTAL_BASE, uid);
+-    char *filename = malloc(filename_size);
+-    snprintf(filename, filename_size, "%s-%u.portal", PATH_PORTAL_BASE, uid);
++    // Never reuse a predictable shared /tmp path: it can be pre-created by
++    // another user. mkstemp creates a unique result file with mode 0600.
++    char *filename = strdup(PATH_PORTAL_BASE "-XXXXXX");
++    if (filename == NULL) {
++        return -1;
++    }
++    int fd = mkstemp(filename);
++    if (fd == -1) {
++        logprint(ERROR, "filechooser: could not create result file: %s", strerror(errno));
++        free(filename);
++        return -1;
++    }
++    if (close(fd) != 0) {
++        remove(filename);
++        free(filename);
++        return -1;
++    }
+ 
+     size_t str_size = 1 + snprintf(NULL, 0, "%s %d %d %d \'%s\' \'%s\' %d",
+                                    cmd_script, multiple, directory, writing,
+@@ -67,23 +79,6 @@
+              multiple, directory, writing, path, filename, get_logger_level());
+ 
+     struct environment *env = state->config->env;
+-
+-    if (access(filename, F_OK) == 0) {
+-        // clear contents
+-        FILE *fp = fopen(filename, "w");
+-        if (fp == NULL) {
+-            logprint(ERROR, "filechooser: could not open '%s'", filename);
+-            free(filename);
+-            free(cmd);
+-            return -1;
+-        }
+-        if (fclose(fp) != 0) {
+-            logprint(ERROR, "filechooser: could not close '%s'", filename);
+-            free(filename);
+-            free(cmd);
+-            return -1;
+-        }
+-    }
+ 
+     for (int i = 0, ret = 0; i < env->num_vars; i++) {
+         logprint(TRACE, "filechooser: setting env: %s=%s", env->vars[i].name,
+@@ -116,6 +111,7 @@
+     FILE *fp = fopen(filename, "r");
+     if (fp == NULL) {
+         logprint(ERROR, "filechooser: failed to open '%s'", filename);
++        remove(filename);
+         free(filename);
+         return -1;
+     }

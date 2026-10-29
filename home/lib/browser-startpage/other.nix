@@ -8,8 +8,8 @@
         icon = "menu_book";
         bookmarks = [
           {
-            name = "Hyprland Wiki";
-            url = "https://wiki.hypr.land";
+            name = "Niri Documentation";
+            url = "https://niri-wm.github.io/niri/";
           }
           {
             name = "Nerdfont Cheatsheet";

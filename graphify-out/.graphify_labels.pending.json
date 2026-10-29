@@ -5,5 +5,7 @@
   "11": "suzuha-clipboard.rs",
   "12": "suzuha-tray.rs",
   "13": "amane-tray.rs",
-  "14": "WATCHER"
+  "14": "WATCHER",
+  "15": "watch.py",
+  "16": "suzuha-fingerprint.rs"
 }

@@ -5,10 +5,12 @@
   hooks = gitHooksLib.run {
     src = ./.;
     hooks = {
+      alejandra.enable = true;
+
       inject-exec = {
         enable = true;
         name = "inject-exec";
-        entry = "python3 .github/scripts/inject-exec.py README.md";
+        entry = "${pkgs.python3}/bin/python3 .github/scripts/inject-exec.py README.md";
         language = "system";
         files = "(README\\.md)";
         pass_filenames = false;
@@ -17,7 +19,7 @@
       doctoc = {
         enable = true;
         name = "doctoc";
-        entry = "doctoc --notitle README.md";
+        entry = "${pkgs.doctoc}/bin/doctoc --notitle README.md";
         language = "system";
         files = "(README\\.md)";
         pass_filenames = false;

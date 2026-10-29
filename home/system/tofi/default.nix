@@ -12,7 +12,7 @@
     then barHeight / 2
     else config.theme.rounding;
 in {
-  imports = [./desktop-actions.nix ./scripts.nix];
+  imports = [./scripts.nix];
   programs.tofi = {
     enable = true;
     settings = {

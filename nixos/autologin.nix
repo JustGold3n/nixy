@@ -6,10 +6,7 @@
   ...
 }: {
   services.greetd.settings.initial_session = {
-    command =
-      if config.programs.niri.enable
-      then "${config.programs.niri.package}/bin/niri-session"
-      else "${pkgs.uwsm}/bin/uwsm start -e -D Hyprland hyprland.desktop";
+    command = "${config.programs.niri.package}/bin/niri-session";
     user = config.var.username;
   };
 

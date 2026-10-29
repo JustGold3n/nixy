@@ -1,0 +1,32 @@
+--- a/src/filechooser/filechooser.c
++++ b/src/filechooser/filechooser.c
+@@ -155,7 +155,7 @@
+         fclose(fp);
+         remove(filename);
+         free(filename);
+-        return -1;
++        return PORTAL_RESPONSE_CANCELLED;
+     }
+ 
+     *num_selected_files = num_lines;
+@@ -509,6 +509,10 @@
+                            &selected_files, &num_selected_files);
+ 
+     free(current_folder);
++    if (ret == PORTAL_RESPONSE_CANCELLED) {
++        ret = sd_bus_reply_method_return(msg, "ua{sv}", PORTAL_RESPONSE_CANCELLED, 0);
++        goto cleanup;
++    }
+     if (ret) {
+         goto cleanup;
+     }
+@@ -738,6 +742,9 @@
+         if (num_selected_files > 1) {
+             logprint(ERROR, "filechooser: too many selected SaveFiles");
+         }
++        if (ret == PORTAL_RESPONSE_CANCELLED) {
++            ret = sd_bus_reply_method_return(msg, "ua{sv}", PORTAL_RESPONSE_CANCELLED, 0);
++        }
+         goto cleanup;
+     }
+ 

@@ -10,7 +10,6 @@
     ../../nixos/autologin.nix # Skip first TUIGreet login, use LUKS password to unlock the keyring
     ../../nixos/users.nix
     ../../nixos/utils.nix
-    ../../nixos/hyprland.nix
     ../../nixos/kernel-hardening.nix
     ../../nixos/vulnix.nix
     ../../home/gui/helium/system.nix # I hate browser's configuration..

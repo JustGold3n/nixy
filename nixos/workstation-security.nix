@@ -1,6 +1,10 @@
 # Desktop hardening for nixtop. Keep user namespaces available for browser
 # sandboxes, Steam and Nix builds.
-{config, ...}: {
+{
+  config,
+  lib,
+  ...
+}: {
   boot.loader.systemd-boot.editor = false;
   boot.initrd.systemd = {
     enable = true;
@@ -37,6 +41,15 @@
       X11Forwarding = false;
     };
   };
+
+  # A per-file persistence mount cannot be atomically replaced by OpenSSH.
+  # Update the backing file directly so host-key rotation can create its backup.
+  programs.ssh.extraConfig = lib.mkIf (config.var.impermanenceEnabled or false) ''
+    Match localuser ${config.var.username}
+      UserKnownHostsFile /persist/home/${config.var.username}/.ssh/known_hosts
+      UpdateHostKeys yes
+    Host *
+  '';
 
   nix.settings = {
     sandbox = true;

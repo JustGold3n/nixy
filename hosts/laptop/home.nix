@@ -9,9 +9,7 @@ in {
   imports =
     utils.importAll ../../home/tui
     ++ utils.importAll ../../home/gui
-    ++ (builtins.filter
-      (path: !(builtins.elem (baseNameOf path) ["hyprland" "hypridle" "hyprlock" "waybar" "swaync" "power"]))
-      (utils.importAll ../../home/system))
+    ++ utils.importAll ../../home/system
     ++ [
       ../../home/system/niri.nix
       ../../home/system/suzuha.nix
@@ -49,8 +47,6 @@ in {
     # Don't touch this
     stateVersion = "26.05";
   };
-
-  disabledModules = [../../home/system/tofi/desktop-actions.nix];
 
   programs = {
     home-manager.enable = true;

@@ -22,12 +22,19 @@
       fprintAuth = true;
       rules.auth.fprintd.settings = {
         max-tries = 3;
-        timeout = 10;
+        # The lock screen runs fingerprint PAM independently of password entry
+        # and cancels it on unlock, so an idle scan does not need to time out.
+        timeout = -1;
       };
     };
   };
   services.upower.enable = true;
-  xdg.portal.config.niri."org.freedesktop.impl.portal.FileChooser" = lib.mkForce ["termfilechooser"];
+  xdg.portal = {
+    extraPortals = [
+      (pkgs.callPackage ./packages/termfilechooser {})
+    ];
+    config.niri."org.freedesktop.impl.portal.FileChooser" = lib.mkForce ["termfilechooser"];
+  };
 
   fonts.packages = with pkgs; [
     poppins

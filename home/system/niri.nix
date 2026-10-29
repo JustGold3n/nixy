@@ -9,6 +9,13 @@
   niri = osConfig.programs.niri.package;
   colors = config.lib.stylix.colors;
   amane = "${scripts.suzuha}/bin/amane";
+  # Niri resolves letter shortcuts across layouts, but number-row symbols need
+  # explicit aliases for the same physical keys on Czech keyboards.
+  czechNumberKeys = ["plus" "ecaron" "scaron" "ccaron" "rcaron" "zcaron" "yacute" "aacute" "iacute"];
+  numberKeys = i:
+    [(toString i)]
+    ++ lib.optional (lib.elem "cz" (lib.splitString "," config.var.keyboardLayout))
+    (builtins.elemAt czechNumberKeys (i - 1));
   tools = pkgs.writeShellApplication {
     name = "niri-tools";
     runtimeInputs = [niri pkgs.foot pkgs.python3 pkgs.fzf];
@@ -221,7 +228,7 @@ in {
       Mod+X repeat=false hotkey-overlay-title="Power menu" { spawn "${amane}" "ipc" "call" "power"; }
       Mod+Y repeat=false hotkey-overlay-title="Background apps / system tray" { spawn "${amane}" "ipc" "call" "tray"; }
       Mod+Return { spawn "${pkgs.foot}/bin/foot"; }
-      Mod+E { spawn "${pkgs.foot}/bin/foot" "-e" "elio"; }
+      Mod+E { spawn "loaf"; }
       Mod+T { spawn "${config.programs.zen-browser.package}/bin/zen-twilight"; }
       Mod+D { spawn "amane" "ipc" "call" "launcher" "toggle"; }
       Mod+Space { spawn "amane" "ipc" "call" "launcher" "toggle"; }
@@ -245,7 +252,7 @@ in {
       Mod+J { focus-window-down; }
       Mod+K { focus-window-up; }
       Mod+L { focus-column-right; }
-      // Hyprland's monitor and master-stack shortcuts, translated to Niri.
+      // Monitor focus and column stacking.
       Mod+Shift+H { focus-monitor-previous; }
       Mod+Shift+L { focus-monitor-next; }
       Mod+Shift+J hotkey-overlay-title="Split bottom window into its own column" { expel-window-from-column; }
@@ -282,16 +289,17 @@ in {
       XF86MonBrightnessUp allow-when-locked=true { spawn "${pkgs.brightnessctl}/bin/brightnessctl" "set" "+5%"; }
       XF86MonBrightnessDown allow-when-locked=true { spawn "${pkgs.brightnessctl}/bin/brightnessctl" "set" "5%-"; }
       ${builtins.readFile ./niri/extra-bindings.kdl}
-      ${lib.concatMapStringsSep "\n" (i: ''
-      Mod+${toString i} { focus-workspace "${toString i}"; }
-      Mod+Shift+${toString i} { move-window-to-workspace "${toString i}"; }
-      Mod+Ctrl+Shift+${toString i} { move-column-to-workspace "${toString i}"; }
-      Mod+Ctrl+${toString i} { move-column-to-workspace "${toString i}"; }
-      Mod+Alt+${toString i} { focus-column ${toString i}; }
-      Mod+Alt+Shift+${toString i} { focus-window-in-column ${toString i}; }
-      Mod+Alt+Ctrl+${toString i} { move-column-to-index ${toString i}; }
-      Mod+Alt+Ctrl+Shift+${toString i} { move-workspace-to-index ${toString i}; }
-    '') (lib.range 1 9)}
+      ${lib.concatMapStringsSep "\n" (i:
+      lib.concatMapStringsSep "\n" (key: ''
+        Mod+${key} { focus-workspace "${toString i}"; }
+        Mod+Shift+${key} { move-window-to-workspace "${toString i}"; }
+        Mod+Ctrl+Shift+${key} { move-column-to-workspace "${toString i}"; }
+        Mod+Ctrl+${key} { move-column-to-workspace "${toString i}"; }
+        Mod+Alt+${key} { focus-column ${toString i}; }
+        Mod+Alt+Shift+${key} { focus-window-in-column ${toString i}; }
+        Mod+Alt+Ctrl+${key} { move-column-to-index ${toString i}; }
+        Mod+Alt+Ctrl+Shift+${key} { move-workspace-to-index ${toString i}; }
+      '') (numberKeys i)) (lib.range 1 9)}
     }
     // Suzuha exports its wallpaper-derived palette; Niri watches for changes.
     include optional=true "${config.home.homeDirectory}/.local/state/amane/niri-colors.kdl"

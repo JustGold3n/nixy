@@ -1,5 +1,10 @@
 {
   disko.devices = {
+    nodev."/" = {
+      fsType = "tmpfs";
+      mountOptions = ["defaults" "size=12G" "mode=755"];
+    };
+
     # Use the existing partitions on /dev/nvme0n1.
     disk = {
       boot = {
@@ -22,14 +27,18 @@
           content = {
             type = "btrfs";
             extraArgs = ["-f"];
-            mountpoint = "/";
-            # /persist is a directory in the root filesystem, not a subvolume.
             subvolumes = {
+              # Keep the entire existing home subvolume across reboots.
               home = {
                 mountpoint = "/home";
               };
               nix = {
                 mountpoint = "/nix";
+              };
+              # Migrate the existing /persist directory to this subvolume
+              # before activating or booting this configuration.
+              persist = {
+                mountpoint = "/persist";
               };
             };
           };
@@ -49,4 +58,5 @@
   };
 
   fileSystems."/home".neededForBoot = true;
+  fileSystems."/persist".neededForBoot = true;
 }

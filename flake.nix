@@ -1,7 +1,7 @@
 {
   # https://github.com/anotherhadi/nixy
   description = ''
-    Nixy simplifies and unifies the Hyprland ecosystem with a minimalist & easily customizable NixOS setup, heavily focused on TUIs.
+    Nixy provides a customizable NixOS setup with Niri, the Suzuha desktop shell, and TUIs.
   '';
 
   inputs = {
@@ -64,8 +64,9 @@
       url = "github:cachix/git-hooks.nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    elio = {
-      url = "github:elio-fm/elio";
+    loaf = {
+      url = "github:m-uvex/loaf-fm/dev";
+      inputs.nixpkgs.follows = "nixpkgs-unstable";
     };
     default-creds = {
       url = "github:anotherhadi/default-creds";
@@ -115,7 +116,7 @@
         formatter.${system} = pkgs.alejandra;
         packages.${system} = {
           nvim = inputs.nvf-config.packages.${system}.nvim;
-          suzuha = pkgs-unstable.callPackage ./nixos/packages/suzuha.nix {inherit inputs;};
+          suzuha = pkgs-unstable.callPackage ./nixos/packages/suzuha {inherit inputs;};
         };
         apps.${system}.nvim = inputs.nvf-config.apps.${system}.nvim;
         nixosConfigurations = {

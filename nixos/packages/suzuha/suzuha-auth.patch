@@ -1,0 +1,183 @@
+--- a/src/services/lock.rs
++++ b/src/services/lock.rs
+@@ -1,5 +1,7 @@
+-use std::sync::Arc;
++mod fingerprint;
++
+ use std::sync::atomic::{AtomicBool, Ordering};
++use std::sync::{Arc, OnceLock};
+ 
+ use super::pam::{self, Session};
+ use crate::changes;
+@@ -7,6 +9,7 @@
+ 
+ // set by Lock::start, taken by the event loop when it wakes
+ static REQUESTED: AtomicBool = AtomicBool::new(false);
++static ON_UNLOCK: OnceLock<fn()> = OnceLock::new();
+ 
+ // the pam service file in /etc/pam.d that checks the password
+ const PAM_SERVICE: &str = "login";
+@@ -22,6 +25,8 @@
+     // the backend ends the lock once this is set, only pam sets it
+     unlocked: bool,
+     attempt: Option<Arc<Session>>,
++    fingerprint: Option<Arc<Session>>,
++    fingerprint_restart: Arc<AtomicBool>,
+ }
+ 
+ // changes through authentication attempts rather than polling
+@@ -34,6 +39,11 @@
+ }
+ 
+ impl Lock {
++    /// Called once after either authentication method accepts the current lock.
++    pub fn on_unlock(callback: fn()) {
++        let _ = ON_UNLOCK.set(callback);
++    }
++
+     // an authentication attempt is in progress
+     pub fn checking(&self) -> bool {
+         self.checking
+@@ -65,6 +75,7 @@
+     pub(crate) fn reset() {
+         let attempt = {
+             let mut lock = Self::write();
++            lock.stop_fingerprint();
+             let attempt = lock.attempt.take();
+             if let Some(attempt) = &attempt {
+                 attempt.abort();
+@@ -94,6 +105,7 @@
+     pub fn abort() {
+         let attempt = {
+             let mut lock = Self::write();
++            lock.stop_fingerprint();
+             let attempt = lock.attempt.take();
+             if let Some(attempt) = &attempt {
+                 attempt.abort();
+@@ -113,7 +125,7 @@
+         let attempt = Arc::new(Session::default());
+         {
+             let mut lock = Self::write();
+-            if lock.checking {
++            if lock.checking || lock.unlocked {
+                 lock.quiet();
+                 return Err(PamError::Busy);
+             }
+@@ -147,5 +159,27 @@
+         lock.checking = false;
+         lock.failed = matches!(result, PamResult::Rejected(_) | PamResult::Error(_));
+         lock.unlocked = !attempt.aborted() && *result == PamResult::Success;
++        let accepted = lock.unlocked;
++        if accepted {
++            lock.stop_fingerprint();
++        } else if lock.failed {
++            lock.fingerprint_restart.store(true, Ordering::Release);
++        }
++        drop(lock);
++        if accepted {
++            Self::notify_unlocked();
++        }
++    }
++
++    fn stop_fingerprint(&mut self) {
++        if let Some(attempt) = self.fingerprint.take() {
++            attempt.abort();
++        }
++    }
++
++    fn notify_unlocked() {
++        if let Some(callback) = ON_UNLOCK.get() {
++            callback();
++        }
+     }
+ }
+--- a/src/wayland/lock.rs
++++ b/src/wayland/lock.rs
+@@ -115,10 +115,13 @@
+         for output in outputs {
+             self.open_lock(output);
+         }
++        // Start only after the compositor has confirmed the session is locked.
++        Lock::start_fingerprint();
+     }
+ 
+     // the compositor refused, most likely because another locker already holds the session
+     fn finished(&mut self, _: &Connection, _: &QueueHandle<Self>, _: SessionLock) {
++        Lock::abort();
+         eprintln!("amane: the compositor refused or ended the session lock");
+ 
+         self.session_lock = None;
+--- a/cli/template/example/suzuha/lock_screen/password.rs
++++ b/cli/template/example/suzuha/lock_screen/password.rs
+@@ -1,11 +1,8 @@
+-use std::thread;
+-
+ use amane::{
+     Center, Color, Column, Image, Lock, Padding, Rectangle, Service, Start, Text, TextInput,
+     Weight, children,
+ };
+ 
+-use super::curtain;
+ use crate::fonts;
+ use crate::profile::Profile;
+ use crate::theme;
+@@ -51,7 +48,7 @@
+         .color(WHITE);
+ 
+     let message = if lock.failed() {
+-        "Wrong password, try again"
++        "Wrong password. Try again or scan your fingerprint."
+     } else {
+         ""
+     };
+@@ -127,13 +124,11 @@
+ 
+ // the field empties either way: a wrong password is typed again from scratch
+ fn submit(password: String) {
+-    if password.is_empty() {
++    if password.is_empty() || Lock::read().checking() {
+         return;
+     }
+ 
+     Lock::unlock(&password);
+ 
+-    thread::spawn(curtain::open_when_accepted);
+-
+     TextInput::set_text(INPUT, "");
+ }
+--- a/cli/template/example/suzuha/lock_screen/curtain.rs
++++ b/cli/template/example/suzuha/lock_screen/curtain.rs
+@@ -36,7 +36,11 @@
+     }
+ 
+     // it only changes when locking and unlocking
+-    fn listen() {}
++    fn listen() {
++        Lock::on_unlock(|| {
++            thread::spawn(open_when_accepted);
++        });
++    }
+ }
+ 
+ // blocks until the session is locked; a lock already on its way is left alone
+--- a/cli/template/example/suzuha/lock_screen.rs
++++ b/cli/template/example/suzuha/lock_screen.rs
+@@ -99,7 +99,7 @@
+         .align_child(Center, Center)
+         .child(password::view(&lock));
+ 
+-    let hint = Text::new(format!("{LOCK_ICON}   Type your password to unlock"))
++    let hint = Text::new(format!("{LOCK_ICON}   Type your password or scan your fingerprint to unlock"))
+         .size(11.0)
+         .font(fonts::BODY)
+         .color(Color::rgba(0xff, 0xff, 0xff, 0xb8));
+--- a/src/services/pam/tests.rs
++++ b/src/services/pam/tests.rs
+@@ -325,6 +325,7 @@
+     Lock::authenticate(fixture.config()).expect("start lock authentication");
+     assert_eq!(complete(), PamResult::Success);
+     wait_for(|| Lock::read().unlocked());
++    Lock::reset(); // A successful lock stays accepted until the next lock starts.
+     fixture.policy("delayed");
+     Lock::authenticate(fixture.config()).expect("start another lock attempt");
+     assert!(!Lock::read().unlocked());

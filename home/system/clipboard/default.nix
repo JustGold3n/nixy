@@ -1,4 +1,4 @@
-# Clipboard history: cliphist watches the Wayland clipboard and stores every entry
+# Clipboard history: cliphist excludes entries marked sensitive by the source.
 {
   pkgs,
   scripts,
@@ -22,10 +22,15 @@ in {
     allowImages = true;
   };
 
+  # Wipe before either watcher starts, and stop both watchers before the logout
+  # wipe. The user manager can outlive the graphical session (e.g. lingering).
+  systemd.user.services.cliphist.Unit.Requires = ["cliphist-wipe.service"];
+  systemd.user.services.cliphist-images.Unit.Requires = ["cliphist-wipe.service"];
   systemd.user.services.cliphist-wipe = {
     Unit = {
       Description = "Wipe cliphist history on login and logout";
-      After = ["cliphist.service"];
+      Before = ["cliphist.service" "cliphist-images.service"];
+      PartOf = ["graphical-session.target"];
     };
     Service = {
       Type = "oneshot";
@@ -33,7 +38,7 @@ in {
       ExecStart = "${pkgs.cliphist}/bin/cliphist wipe";
       ExecStop = "${pkgs.cliphist}/bin/cliphist wipe";
     };
-    Install.WantedBy = ["default.target"];
+    Install.WantedBy = ["graphical-session.target"];
   };
 
   xdg.desktopEntries = {

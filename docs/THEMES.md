@@ -1,6 +1,6 @@
 # Themes
 
-Themes are defined in `themes/`. They define the colors, fonts, icons, wallpaper, and other visual settings used by Hyprland and all apps/programs.
+Themes are defined in `themes/`. They define the colors, fonts, icons, wallpaper, and other visual settings used by Niri, Suzuha, and all apps/programs.
 You can change the selected theme by changing the import statement in your host's `variables.nix` file.
 
 ## Create your theme

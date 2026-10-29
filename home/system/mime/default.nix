@@ -10,10 +10,10 @@
     image = ["imv-dir.desktop"];
     audio = ["kew.desktop"];
     video = ["vlc.desktop"];
-    directory = ["elio.desktop"];
+    directory = ["loaf.desktop"];
     office = ["onlyoffice-desktopeditors.desktop"];
     pdf = ["zen-twilight.desktop"];
-    archive = ["elio.desktop"];
+    archive = ["loaf.desktop"];
     browser = ["zen-twilight.desktop"];
     mail = ["thunderbird.desktop"];
   };

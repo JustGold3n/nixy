@@ -1,7 +1,6 @@
 {
   config,
   lib,
-  pkgs,
   modulesPath,
   ...
 }: {
@@ -14,6 +13,8 @@
   boot.kernelModules = ["kvm-intel"];
   boot.extraModulePackages = [];
 
+  # Current disk-backed layout. Remove these storage declarations when
+  # enabling the prepared impermanence layout in disko.nix.
   fileSystems."/" = {
     device = "/dev/mapper/luks-a8791708-eebd-4b9b-84e5-ff7a215b217a";
     fsType = "btrfs";
