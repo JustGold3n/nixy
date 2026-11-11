@@ -1,5 +1,6 @@
 # Local development state and build outputs
 /.direnv/
+/.pre-commit-config.yaml
 /result
 /result-*
 __pycache__/
