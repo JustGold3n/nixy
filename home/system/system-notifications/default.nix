@@ -4,20 +4,24 @@
   pkgs,
   ...
 }: let
-  python = pkgs.python3.withPackages (ps: [ps.dbus-python ps.pygobject3]);
+  tools = pkgs.callPackage ../../../nixos/packages/nixy-tools {};
 in {
   config = lib.mkIf ((config.var.hostname or "") == "nixtop") {
-    services.poweralertd.enable = true;
-    systemd.user.services.poweralertd.Unit.After = ["suzuha.service"];
+    # Report charger connections below; battery charge-cycle states stay quiet.
+    services.poweralertd.enable = false;
+
+    services.udiskie.package = pkgs.udiskie.overrideAttrs (old: {
+      patches = (old.patches or []) ++ [./udiskie-notifications.patch];
+    });
 
     systemd.user.services.system-notifications = {
       Unit = {
-        Description = "Network and Bluetooth event notifications";
+        Description = "Network, Bluetooth and charger connection notifications";
         After = ["graphical-session.target" "suzuha.service"];
         PartOf = ["graphical-session.target"];
       };
       Service = {
-        ExecStart = "${python}/bin/python ${./watch.py}";
+        ExecStart = "${tools}/bin/system-notifications";
         Restart = "on-failure";
         RestartSec = 3;
       };

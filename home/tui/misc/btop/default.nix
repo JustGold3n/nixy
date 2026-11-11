@@ -5,6 +5,7 @@ in {
     enable = true;
     package = btopPackage;
     settings = {
+      theme_background = false;
       vim_keys = true;
       shown_boxes = "cpu mem net proc gpu0";
     };

@@ -1,0 +1,24 @@
+--- a/cli/template/example/suzuha/lock_screen/curtain.rs
++++ b/cli/template/example/suzuha/lock_screen/curtain.rs
+@@ -1,3 +1,4 @@
++use std::process::Command;
+ use std::thread;
+ use std::time::Duration;
+ 
+@@ -58,6 +59,16 @@
+ 
+     thread::sleep(motion::paced(DARKEN));
+ 
++    // nixtop configures English (US) first. Finish switching before the
++    // password field opens, regardless of which path requested the lock.
++    match Command::new("niri")
++        .args(["msg", "action", "switch-layout", "0"])
++        .status()
++    {
++        Ok(status) if status.success() => {}
++        Ok(status) => eprintln!("suzuha: could not switch lock-screen layout: {status}"),
++        Err(error) => eprintln!("suzuha: could not switch lock-screen layout: {error}"),
++    }
+     Lock::start();
+ }
+ 

@@ -1,0 +1,26 @@
+--- a/notify.c
++++ b/notify.c
+@@ -24,9 +24,10 @@
+ 	    summary,
+ 	    body,
+ 	    0,
+-	    2,
++	    3,
+ 	    "urgency", "y", (uint8_t)urgency,
+ 	    "category", "s", category,
++	    "transient", "b", 1,
+ 	    -1);
+
+ 	if (ret < 0) {
+--- a/upower.h
++++ b/upower.h
+@@ -69,7 +69,8 @@
+
+ enum change_slot {
+ 	SLOT_STATE = 0,
+-	SLOT_WARNING = 1,
++	// Status and warning changes update the same popup for each battery.
++	SLOT_WARNING = SLOT_STATE,
+ 	SLOT_ONLINE = 2,
+ };
+

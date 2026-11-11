@@ -361,7 +361,8 @@ pub fn popup(monitor: &Monitor) -> LayerWindow {
                 .width(Parent)
                 .height(Parent)
                 .radius(12.0)
-                .fill(theme.surface)
+                .fill(crate::glass::fill(&theme))
+                .border(1.0, crate::glass::edge(&theme))
                 .padding(Padding::from(8.0))
                 .clip()
                 .child(ScrollArea::new(

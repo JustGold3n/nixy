@@ -107,6 +107,19 @@
          eprintln!("amane: the compositor refused or ended the session lock");
  
          self.session_lock = None;
+--- a/cli/template/example/suzuha/main.rs
++++ b/cli/template/example/suzuha/main.rs
+@@ -59,6 +59,10 @@
+         .window_per_monitor(overlay::view)
+         .window_per_monitor(wallpaper::picker::view)
+         .lock(lock_screen::view)
++        .ipc("fingerprint-restart", |_| {
++            amane::Lock::restart_fingerprint();
++            String::from("ok")
++        })
+         .ipc("launcher", overlay::launcher::ipc)
+         .ipc("utility", overlay::utility::ipc)
+         .ipc("control", overlay::control_center::ipc)
 --- a/cli/template/example/suzuha/lock_screen/password.rs
 +++ b/cli/template/example/suzuha/lock_screen/password.rs
 @@ -1,11 +1,8 @@

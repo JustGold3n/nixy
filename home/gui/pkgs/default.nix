@@ -16,6 +16,7 @@ in {
       signal-desktop # Messaging app
       ticktick # Todo app
       telegram-desktop
+      mattermost-desktop
 
       # Backup
       gnome-text-editor

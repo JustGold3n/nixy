@@ -5,6 +5,7 @@ use crate::{Argument, Service, Value};
 use std::collections::{BTreeSet, HashMap};
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::mpsc::{self, SyncSender};
 use std::sync::{Arc, LazyLock, Mutex};
 use std::thread;
 use std::time::Duration;
@@ -26,6 +27,7 @@ type Registry = Arc<Mutex<BTreeSet<String>>>;
 
 struct Watcher {
     registry: Registry,
+    wake: Option<SyncSender<()>>,
 }
 #[zbus::interface(name = "org.kde.StatusNotifierWatcher")]
 impl Watcher {
@@ -38,6 +40,9 @@ impl Watcher {
         let endpoint = registration(service, sender)
             .ok_or_else(|| zbus::fdo::Error::InvalidArgs("Invalid tray endpoint".into()))?;
         self.registry.lock().unwrap().insert(endpoint);
+        if let Some(wake) = &self.wake {
+            let _ = wake.try_send(());
+        }
         Ok(())
     }
     fn register_status_notifier_host(&self, _service: &str) {}
@@ -149,12 +154,37 @@ impl Service for Tray {
             return;
         };
         let registry = Registry::default();
+        // Coalesce bursts, but deliver registration and icon changes at once.
+        let (wake, events) = mpsc::sync_channel(1);
+        for interface in [ITEM, WATCHER, "org.freedesktop.DBus"] {
+            let rule = zbus::MatchRule::builder()
+                .msg_type(zbus::message::Type::Signal)
+                .interface(interface)
+                .unwrap()
+                .build();
+            let Ok(signals) =
+                zbus::blocking::MessageIterator::for_match_rule(rule, connection, Some(64))
+            else {
+                continue;
+            };
+            let wake = wake.clone();
+            let own_name = connection.unique_name().map(ToString::to_string);
+            thread::spawn(move || {
+                for message in signals.flatten() {
+                    // Our registration announcements must not feed back.
+                    if message.header().sender().map(|name| name.as_str()) != own_name.as_deref() {
+                        let _ = wake.try_send(());
+                    }
+                }
+            });
+        }
         if connection
             .object_server()
             .at(
                 WATCH_PATH,
                 Watcher {
                     registry: registry.clone(),
+                    wake: Some(wake),
                 },
             )
             .is_err()
@@ -319,7 +349,8 @@ impl Service for Tray {
                 tray.items = items;
             }
             drop(tray);
-            thread::sleep(Duration::from_secs(1));
+            // Recover from clients that omit SNI signals without constant IPC.
+            let _ = events.recv_timeout(Duration::from_secs(30));
         }
     }
 }
@@ -533,6 +564,7 @@ mod tests {
                 WATCH_PATH,
                 Watcher {
                     registry: registry.clone(),
+                    wake: None,
                 },
             )
             .unwrap()

@@ -13,7 +13,11 @@ in {
   ];
 
   config = lib.mkIf ((config.var.hostname or "") == "nixtop") {
-    stylix.targets.zen-browser.profileNames = ["default"];
+    stylix.targets.zen-browser = {
+      profileNames = ["default"];
+      # Keep the fonts; Suzuha's GTK palette supplies live browser colors.
+      enableCss = false;
+    };
 
     programs.zen-browser = {
       enable = true;
@@ -75,6 +79,11 @@ in {
         };
 
         ExtensionSettings = {
+          # Copy selections to the normal clipboard (Ctrl+V), not only PRIMARY.
+          "{dd97d42c-6560-4fb2-8db4-bf340824fde0}" = {
+            installation_mode = "force_installed";
+            install_url = "https://addons.mozilla.org/firefox/downloads/file/4962359/copy_on_select_2-2.10.xpi";
+          };
           "foxyproxy@eric.h.jung" = {
             installation_mode = "force_installed";
             install_url = "https://addons.mozilla.org/firefox/downloads/latest/foxyproxy-standard/latest.xpi";
@@ -179,6 +188,17 @@ in {
 
       profiles.default = {
         isDefault = true;
+
+        userChrome = ''
+          ${builtins.readFile ./wallpaper.css}
+
+          /* Hide action buttons inside the address field, including on hover. */
+          #urlbar #page-action-buttons,
+          #urlbar #zen-copy-url-button,
+          #urlbar .unified-extensions-item {
+            display: none !important;
+          }
+        '';
 
         # Extension button order from the current toolbar and extensions panel.
         extensionButtons = {
@@ -288,8 +308,18 @@ in {
           "signon.generation.enabled" = false;
           "signon.management.page.breach-alerts.enabled" = false;
 
+          # Follow Suzuha's GTK colors at startup and after wallpaper changes.
+          "extensions.activeThemeID" = "default-theme@mozilla.org";
+          "zen.view.window.scheme" = lib.mkForce 2;
+          "zen.theme.accent-color" = "AccentColor";
+          "zen.theme.use-system-colors" = true;
+          "browser.theme.native-theme" = true;
+          "widget.gtk.libadwaita-colors.enabled" = false;
+          "widget.non-native-theme.use-theme-accent" = true;
+          "toolkit.legacyUserProfileCustomizations.stylesheets" = true;
+          "clipboard.autocopy" = true;
+
           # Appearance and media; fonts and reader colors are supplied by Stylix.
-          "extensions.activeThemeID" = "firefox-compact-dark@mozilla.org";
           "extensions.pictureinpicture.enable_picture_in_picture_overrides" = true;
           "zen.library.media.enabled" = true;
           "zen.theme.hide-unified-extensions-button" = false;

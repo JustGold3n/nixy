@@ -2,6 +2,7 @@
   pkgs,
   gitHooksLib,
 }: let
+  tools = pkgs.callPackage ./nixos/packages/nixy-tools {};
   hooks = gitHooksLib.run {
     src = ./.;
     hooks = {
@@ -10,7 +11,7 @@
       inject-exec = {
         enable = true;
         name = "inject-exec";
-        entry = "${pkgs.python3}/bin/python3 .github/scripts/inject-exec.py README.md";
+        entry = "${tools}/bin/inject-exec README.md";
         language = "system";
         files = "(README\\.md)";
         pass_filenames = false;
@@ -31,7 +32,11 @@ in
     packages = with pkgs;
       [
         doctoc
-        python3
+        cargo
+        rustc
+        rustfmt
+        clippy
+        tools
       ]
       ++ hooks.enabledPackages;
 

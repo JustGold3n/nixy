@@ -1,0 +1,131 @@
+--- a/src/services/network.rs
++++ b/src/services/network.rs
+@@ -4,7 +4,7 @@
+ mod profile;
+ mod wifi;
+ 
+-use std::thread;
++use crate::Bus;
+ 
+ use crate::services::worker;
+ use crate::{Service, Value};
+@@ -31,10 +31,7 @@
+     access_points: Vec<AccessPoint>,
+ }
+ 
+-/*
+- * polled, because the access point's strength
+- * changes all the time without a new connection
+- */
++// Refresh on property changes without blocking the shared bus reader.
+ impl Service for Network {
+     fn new() -> Self {
+         fetch()
+@@ -46,16 +43,15 @@
+      * the windows aren't redrawn every second for no reason
+      */
+     fn listen() {
++        let changes = Bus::system().property_changes("/org/freedesktop/NetworkManager");
+         loop {
+-            thread::sleep(Self::interval());
+-
+             let fresh = fetch();
+-
+-            if *Self::read() == fresh {
+-                continue;
++            if *Self::read() != fresh {
++                *Self::write() = fresh;
+             }
+-
+-            *Self::write() = fresh;
++            if changes.recv().is_err() {
++                return;
++            }
+         }
+     }
+ }
+--- a/src/services/battery.rs
++++ b/src/services/battery.rs
+@@ -1,8 +1,7 @@
+ use std::fs;
+ use std::path::{Path, PathBuf};
+-use std::time::Duration;
+ 
+-use crate::Service;
++use crate::{Bus, Service};
+ 
+ const POWER_SUPPLIES: &str = "/sys/class/power_supply";
+ 
+@@ -20,7 +19,7 @@
+     full: bool,
+ }
+ 
+-// polled, the kernel only exposes the charge as files
++// UPower events trigger a fresh sysfs snapshot.
+ impl Service for Battery {
+     fn new() -> Self {
+         let mut battery = Self {
+@@ -33,8 +32,19 @@
+         battery
+     }
+ 
+-    fn interval() -> Duration {
+-        Duration::from_secs(5)
++    fn listen() {
++        let changes = Bus::system().property_changes("/org/freedesktop/UPower");
++        loop {
++            {
++                let mut battery = Self::write();
++                if !battery.update() {
++                    battery.quiet();
++                }
++            }
++            if changes.recv().is_err() {
++                return;
++            }
++        }
+     }
+ 
+     fn update(&mut self) -> bool {
+--- a/src/dbus/signal.rs
++++ b/src/dbus/signal.rs
+@@ -1,3 +1,6 @@
++use std::sync::mpsc::{self, Receiver, TrySendError};
++use std::thread;
++
+ use zbus::MatchRule;
+ use zbus::blocking::MessageIterator;
+ use zbus::message::Type;
+@@ -36,6 +39,25 @@
+ }
+ 
+ impl Bus {
++    // Always drain zbus streams: a full signal queue blocks replies on the
++    // shared connection. State services only need one pending refresh, since
++    // their next snapshot reads the complete current state.
++    pub(crate) fn property_changes(&self, prefix: &'static str) -> Receiver<()> {
++        let signals = self.signals("org.freedesktop.DBus.Properties", "PropertiesChanged");
++        let (wake, changes) = mpsc::sync_channel(1);
++        thread::spawn(move || {
++            for signal in signals {
++                if signal.path().starts_with(prefix) {
++                    match wake.try_send(()) {
++                        Ok(()) | Err(TrySendError::Full(())) => {}
++                        Err(TrySendError::Disconnected(())) => return,
++                    }
++                }
++            }
++        });
++        changes
++    }
++
+     // waits for each matching signal, so call it from a service thread, not from view()
+     pub fn signals(&self, interface: &str, name: &str) -> Signals {
+         let rule = MatchRule::builder()
+@@ -80,3 +102,6 @@
+         }
+     }
+ }
++
++#[cfg(test)]
++mod tests;

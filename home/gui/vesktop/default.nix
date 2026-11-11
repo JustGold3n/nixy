@@ -13,12 +13,12 @@
     trayStartupTarget
     waitForTray
     ;
-  legcordSettings = "${config.xdg.configHome}/legcord/storage/settings.json";
-  configureLegcord = pkgs.writeShellScript "legcord-configure" ''
+  vesktopSettings = "${config.xdg.configHome}/vesktop/settings.json";
+  configureVesktop = pkgs.writeShellScript "vesktop-configure" ''
     set -eu
     umask 077
 
-    settings=${lib.escapeShellArg legcordSettings}
+    settings=${lib.escapeShellArg vesktopSettings}
     if [[ ! -f "$settings" ]]; then
       exit 0
     fi
@@ -27,45 +27,46 @@
     trap '${pkgs.coreutils}/bin/rm -f "$temporary"' EXIT
 
     ${lib.getExe pkgs.jq} \
-      '.startMinimized = true | .minimizeToTray = true | if .tray == "disabled" then .tray = "dynamic" else . end' \
+      '.minimizeToTray = true | .tray = true' \
       "$settings" > "$temporary"
     ${pkgs.coreutils}/bin/chmod --reference="$settings" "$temporary"
     ${pkgs.coreutils}/bin/mv "$temporary" "$settings"
     trap - EXIT
   '';
 in {
-  home.packages = [pkgs.legcord];
+  home.packages = [pkgs.vesktop];
 
   home.persistence."/persist" = lib.mkIf (config.var.impermanenceEnabled or false) {
-    directories = [".config/legcord"];
+    directories = [".config/vesktop"];
   };
 
   # Reuse the background application when its desktop entry is launched.
-  xdg.desktopEntries.legcord = lib.mkIf isNixtop {
+  xdg.desktopEntries.vesktop = lib.mkIf isNixtop {
     name = "Discord";
     genericName = "Internet Messenger";
     comment = "Lightweight, alternative desktop client for Discord";
-    exec = "${lib.getExe pkgs.legcord} %U";
-    icon = "legcord";
+    exec = "${lib.getExe pkgs.vesktop} %U";
+    icon = "vesktop";
     terminal = false;
     categories = ["Network" "InstantMessaging" "Chat"];
+    mimeType = ["x-scheme-handler/discord"];
     settings = {
       Keywords = "discord;vencord;electron;chat;";
-      StartupWMClass = "Legcord";
+      StartupWMClass = "Vesktop";
     };
   };
 
-  systemd.user.services.legcord = lib.mkIf isNixtop {
+  systemd.user.services.vesktop = lib.mkIf isNixtop {
     Unit = {
-      Description = "Legcord background Discord client";
+      Description = "Vesktop background Discord client";
       After = ["graphical-session.target" notificationService];
       Wants = [notificationService];
       PartOf = ["graphical-session.target"];
     };
     Service = {
       Type = "exec";
-      ExecStartPre = lib.optional useNiri "${waitForTray}" ++ ["${configureLegcord}"];
-      ExecStart = "${lib.getExe pkgs.legcord}";
+      ExecStartPre = lib.optional useNiri "${waitForTray}" ++ ["${configureVesktop}"];
+      ExecStart = "${lib.getExe pkgs.vesktop} --start-minimized";
       Restart = "on-failure";
       RestartSec = 5;
     };

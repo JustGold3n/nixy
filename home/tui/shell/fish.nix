@@ -118,6 +118,16 @@
     interactiveShellInit = ''
       set --global fish_greeting
 
+      # Override old universal theme colors, including in newly opened shells.
+      set --global fish_color_normal ffffff
+      set --global fish_color_param ffffff
+      set --global fish_color_autosuggestion 8e8aa0
+      set --global fish_color_comment ffffff
+      # Keep the typed prefix white and the suggested filename suffix grey.
+      set --global fish_pager_color_prefix ffffff --bold
+      set --global fish_pager_color_description 8e8aa0
+      set --global fish_pager_color_completion 8e8aa0
+
       fish_vi_key_bindings
       set --global fish_cursor_default block
       set --global fish_cursor_insert line

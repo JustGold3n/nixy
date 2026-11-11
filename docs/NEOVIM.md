@@ -31,7 +31,8 @@ Then import the home-manager module in your home configuration:
 
 | File            | Description                                                            |
 | --------------- | ---------------------------------------------------------------------- |
-| `options.nix`   | Core settings: theme (catppuccin mocha), clipboard, indentation, folds |
+| `options.nix`   | Core settings: wallpaper-colored Catppuccin, clipboard, indentation, folds |
+| `wallpaper.lua` | Loads Suzuha's palette at startup and updates open editors when it changes |
 | `languages.nix` | LSP, treesitter, formatters, diagnostics, and per-language config      |
 | `keymaps.nix`   | All key mappings (leader: `space`)                                     |
 | `picker.nix`    | Snacks picker + oil.nvim                                               |

@@ -64,3 +64,179 @@
                  .clip()
                  .on_hover(reveal::hover)
                  .child(Rectangle::new().width(Parent).height(height).translate(0.0, slide).child(bar)),
+--- a/cli/template/example/suzuha/overlay.rs
++++ b/cli/template/example/suzuha/overlay.rs
+@@ -82,7 +82,7 @@
+      * the launcher and a password field are typed into, so they take the
+      * keyboard while open; the utility center takes it once clicked, for escape
+      */
+-    let keyboard = if overlay.launcher.shown || utility::wants_keyboard(&overlay) {
++    let keyboard = if overlay.power_menu.shown || overlay.launcher.shown || utility::wants_keyboard(&overlay) {
+         Keyboard::Exclusive
+     } else if overlay.utility.shown {
+         Keyboard::OnDemand
+@@ -144,6 +144,7 @@
+ 
+ // only one panel is out at a time, so only one of these acts on the key
+ fn key_pressed(key: Key) {
++    power_menu::key_pressed(key);
+     launcher::key_pressed(key);
+     utility::key_pressed(key);
+ }
+--- a/cli/template/example/suzuha/overlay/state.rs
++++ b/cli/template/example/suzuha/overlay/state.rs
+@@ -112,6 +112,8 @@
+ impl Overlay {
+     // only one panel is out at a time
+     pub fn toggle_power_menu() {
++        amane::TextInput::unfocus();
++
+         let mut overlay = Self::write();
+ 
+         overlay.launcher.hide();
+--- a/cli/template/example/suzuha/overlay/power_menu.rs
++++ b/cli/template/example/suzuha/overlay/power_menu.rs
+@@ -1,5 +1,5 @@
+ use amane::{
+-    Button, Center, Color, Column, Padding, Pointer, Rectangle, Row, Service, Stack, Start, Text,
++    Button, Center, Color, Column, Key, Padding, Pointer, Rectangle, Row, Service, Stack, Start, Text,
+     Weight, Widget, children,
+ };
+ 
+@@ -36,6 +36,7 @@
+ 
+ struct Action {
+     label: &'static str,
++    shortcut: char,
+     icon: &'static str,
+     command: &'static str,
+ 
+@@ -46,30 +47,35 @@
+ const ACTIONS: [Action; ACTION_COUNT] = [
+     Action {
+         label: "Shutdown",
++        shortcut: 'p',
+         icon: "\u{23fb}",
+         command: "systemctl poweroff",
+         danger: true,
+     },
+     Action {
+         label: "Lock",
++        shortcut: 'l',
+         icon: "\u{f033e}",
+         command: "loginctl lock-session",
+         danger: false,
+     },
+     Action {
+         label: "Restart",
++        shortcut: 'r',
+         icon: "\u{f0709}",
+         command: "systemctl reboot",
+         danger: false,
+     },
+     Action {
+         label: "Sleep",
++        shortcut: 's',
+         icon: "\u{f04b2}",
+         command: "systemctl suspend",
+         danger: false,
+     },
+     Action {
+         label: "Logout",
++        shortcut: 'q',
+         icon: "\u{f0343}",
+         command: "niri msg action quit --skip-confirmation",
+         danger: false,
+@@ -167,7 +173,7 @@
+         .align_child(Center, Center)
+         .child(Text::new(action.icon).size(20.0).font(fonts::NERD).color(icon_color));
+ 
+-    let label = Text::new(action.label)
++    let label = Text::new(format!("{} [{}]", action.label, action.shortcut.to_ascii_uppercase()))
+         .size(14.0)
+         .font(fonts::BODY)
+         .weight(Weight::Medium)
+@@ -222,3 +228,42 @@
+ 
+     amane::spawn(command);
+ }
++
++// Only the visible menu handles shortcuts; hiding it also prevents key repeats.
++pub fn key_pressed(key: Key) {
++    if !Overlay::read().power_menu.shown {
++        return;
++    }
++    if key == Key::Escape {
++        Overlay::hide_power_menu();
++    } else if let Some(action) = shortcut(key) {
++        run(action.command);
++    }
++}
++
++fn shortcut(key: Key) -> Option<&'static Action> {
++    let Key::Character(letter) = key else { return None };
++    ACTIONS.iter().find(|action| action.shortcut == letter.to_ascii_lowercase())
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    #[test]
++    fn shortcuts_select_the_expected_commands() {
++        for (letter, command) in [
++            ('p', "systemctl poweroff"),
++            ('l', "loginctl lock-session"),
++            ('r', "systemctl reboot"),
++            ('s', "systemctl suspend"),
++            ('q', "niri msg action quit --skip-confirmation"),
++        ] {
++            assert_eq!(shortcut(Key::Character(letter)).unwrap().command, command);
++            assert_eq!(shortcut(Key::Character(letter.to_ascii_uppercase())).unwrap().command, command);
++        }
++        for key in [Key::Character('x'), Key::Enter, Key::Escape, Key::Other] {
++            assert!(shortcut(key).is_none());
++        }
++    }
++}
+--- a/src/widgets/text_input.rs
++++ b/src/widgets/text_input.rs
+@@ -37,6 +37,11 @@
+ }
+ 
+ impl TextInput {
++    // Release a hidden input when switching to a keyboard-driven menu.
++    pub fn unfocus() {
++        focus::clear();
++    }
++
+     pub fn new(id: &'static str) -> Self {
+         Self {
+             id,
+--- a/cli/template/example/suzuha/overlay.rs
++++ b/cli/template/example/suzuha/overlay.rs
+@@ -58,16 +58,20 @@
+         panels.push(panel);
+     }
+ 
+-    if let Some(panel) = launcher::view(&overlay, &theme, screen) {
+-        panels.push(panel);
++    if !overlay.power_menu.shown {
++        if let Some(panel) = launcher::view(&overlay, &theme, screen) {
++            panels.push(panel);
++        }
+     }
+ 
+     if let Some(panel) = control_center::view(&overlay, &theme, screen) {
+         panels.push(panel);
+     }
+ 
+-    if let Some(panel) = utility::view(&overlay, &theme, screen) {
+-        panels.push(panel);
++    if !overlay.power_menu.shown {
++        if let Some(panel) = utility::view(&overlay, &theme, screen) {
++            panels.push(panel);
++        }
+     }
+ 
+     if let Some(panel) = popups::view(&overlay, &theme, screen) {

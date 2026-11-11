@@ -5,9 +5,15 @@
   pkgs,
   pkgs-unstable,
   ...
-}: {
+}: let
+  # The Rust build hook requires system libraries, which upstream omits here.
+  eilmeldung = pkgs-unstable.eilmeldung.overrideAttrs (old: {
+    nativeBuildInputs = (old.nativeBuildInputs or []) ++ [pkgs-unstable.pkg-config];
+    buildInputs = (old.buildInputs or []) ++ [pkgs-unstable.aws-lc pkgs-unstable.sqlite];
+  });
+in {
   home.packages = [
-    pkgs-unstable.eilmeldung
+    eilmeldung
   ];
 
   home.persistence."/persist" = lib.mkIf (config.var.impermanenceEnabled or false) {
@@ -16,7 +22,7 @@
 
   xdg.desktopEntries.eilmeldung = {
     name = "eilmeldung";
-    exec = "${pkgs.foot}/bin/foot -e ${pkgs-unstable.eilmeldung}/bin/eilmeldung";
+    exec = "${pkgs.foot}/bin/foot -e ${eilmeldung}/bin/eilmeldung";
     comment = "Feature-rich TUI RSS reader";
     categories = ["Network" "ConsoleOnly"];
     terminal = false;

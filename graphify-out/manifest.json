@@ -5,12 +5,6 @@
     "ast_hash": "005ac71c84af2cae38e255e2b9de2411",
     "semantic_hash": "005ac71c84af2cae38e255e2b9de2411"
   },
-  ".github/scripts/inject-exec.py": {
-    "mtime": 1790856294.9589508,
-    "seen": 1791453367.997533,
-    "ast_hash": "0b5990df74b2ba8473e488a51045b47d",
-    "semantic_hash": "0b5990df74b2ba8473e488a51045b47d"
-  },
   ".github/FUNDING.yml": {
     "mtime": 1790856294.9519508,
     "seen": 1791453367.9975407,
@@ -24,21 +18,21 @@
     "semantic_hash": "8b7ca6ff59e4e8e4198c0b4dbe16e2d3"
   },
   "README.md": {
-    "mtime": 1793271754.9503846,
-    "seen": 1793271763.1474698,
+    "mtime": 1793271821.197617,
+    "seen": 1793272022.6990385,
     "ast_hash": "d69a9e9826468258f8dacb9dad2f27e8",
     "semantic_hash": ""
   },
   "docs/CONTRIBUTING.md": {
-    "mtime": 1793216838.7893546,
-    "seen": 1793216882.9370463,
-    "ast_hash": "c2260cc989b8623a9095d16c0dc76430",
+    "mtime": 1794005839.0069458,
+    "seen": 1794006039.7408693,
+    "ast_hash": "111275f962f955de3b420e44af096e70",
     "semantic_hash": ""
   },
   "docs/NEOVIM.md": {
-    "mtime": 1792179866.875426,
-    "seen": 1792179882.8697133,
-    "ast_hash": "6f59f67bbb5fb9fe9a7c716408e25b8b",
+    "mtime": 1793909603.1578062,
+    "seen": 1793964242.4912264,
+    "ast_hash": "45f1c3c5746f37a14ef007e9ad76ed32",
     "semantic_hash": ""
   },
   "docs/SERVER.md": {
@@ -89,34 +83,10 @@
     "ast_hash": "c038df62f215a3e7b5f18b3aa3b24a9f",
     "semantic_hash": "c038df62f215a3e7b5f18b3aa3b24a9f"
   },
-  "home/system/niri/tools.py": {
-    "mtime": 1792931983.8239725,
-    "seen": 1792931987.7452574,
-    "ast_hash": "0d4b12b7873ec896bd35bfee7b115eb4",
-    "semantic_hash": ""
-  },
-  "home/system/system-notifications/test_watch.py": {
-    "mtime": 1793022953.0258293,
-    "seen": 1793022974.9854746,
-    "ast_hash": "e83b5efec1ef3f896d65f79dd074cedf",
-    "semantic_hash": ""
-  },
-  "home/system/system-notifications/watch.py": {
-    "mtime": 1793022872.4978318,
-    "seen": 1793022974.9854765,
-    "ast_hash": "6f5b6c431ec93528554fa78dd856b561",
-    "semantic_hash": ""
-  },
-  "nixos/packages/loaf/test-chooser.py": {
-    "mtime": 1793216363.3352742,
-    "seen": 1793216478.8821201,
-    "ast_hash": "498b72a637f3e624ba0932febe5fffc3",
-    "semantic_hash": ""
-  },
   "nixos/packages/suzuha/amane-tray.rs": {
-    "mtime": 1792933852.35393,
-    "seen": 1793216478.8821235,
-    "ast_hash": "d9ef0c987c23750c1add70ca9e63a2e8",
+    "mtime": 1794218081.3699272,
+    "seen": 1794218195.19654,
+    "ast_hash": "f6f677b13ef6d164aebd79f0075ede2e",
     "semantic_hash": ""
   },
   "nixos/packages/suzuha/suzuha-clipboard.rs": {
@@ -138,21 +108,159 @@
     "semantic_hash": ""
   },
   "nixos/packages/suzuha/suzuha-tray.rs": {
-    "mtime": 1792955790.3843875,
-    "seen": 1793216478.882138,
-    "ast_hash": "86bf9075d1071a8d5b13305341b0cd5d",
-    "semantic_hash": ""
-  },
-  "nixos/packages/termfilechooser/test-termfilechooser.py": {
-    "mtime": 1793193682.122823,
-    "seen": 1793216478.8821402,
-    "ast_hash": "5ac711c221c24c34d868d7e1ff13baf2",
+    "mtime": 1793890568.450903,
+    "seen": 1793890770.1732538,
+    "ast_hash": "9d21f320489391c6aa2569d64935031c",
     "semantic_hash": ""
   },
   "nixos/packages/suzuha/suzuha-fingerprint.rs": {
-    "mtime": 1793253110.2603383,
-    "seen": 1793253207.8644774,
-    "ast_hash": "553fd4f11e7ac827a6fa7d1cb52ee1ab",
+    "mtime": 1793985693.0499449,
+    "seen": 1793985720.1107197,
+    "ast_hash": "eb0148fbdcd3f4714254fa54dee36896",
+    "semantic_hash": ""
+  },
+  "nixos/packages/suzuha/amane-app-icons-tests.rs": {
+    "mtime": 1793367507.5296564,
+    "seen": 1793367607.7806613,
+    "ast_hash": "a3b78b8a2a2341fa58d59b73ffe4310c",
+    "semantic_hash": ""
+  },
+  "nixos/packages/suzuha/suzuha-status.rs": {
+    "mtime": 1793986582.4719172,
+    "seen": 1793986588.027706,
+    "ast_hash": "57bd30f5a12026c3e61cda4b031e6acf",
+    "semantic_hash": ""
+  },
+  "nixos/packages/suzuha/suzuha-battery-care.rs": {
+    "mtime": 1794217987.8909302,
+    "seen": 1794218195.1965454,
+    "ast_hash": "86edf766fc9a15bd919142e9c2245fd1",
+    "semantic_hash": ""
+  },
+  "nixos/packages/suzuha/suzuha-private-dir.rs": {
+    "mtime": 1793814520.5267408,
+    "seen": 1793815231.7037923,
+    "ast_hash": "1548348afc408bebe54a563da8e9994a",
+    "semantic_hash": ""
+  },
+  "nixos/packages/suzuha/amane-background-effect.rs": {
+    "mtime": 1793890613.7409015,
+    "seen": 1793890770.1731884,
+    "ast_hash": "6238ea8c7774f9ac71be47e00f18ffa6",
+    "semantic_hash": ""
+  },
+  "nixos/packages/suzuha/suzuha-glass-region.rs": {
+    "mtime": 1793890613.7429016,
+    "seen": 1793890770.1732247,
+    "ast_hash": "26ebb1629a15671de098a798c6760ca0",
+    "semantic_hash": ""
+  },
+  "nixos/packages/suzuha/suzuha-glass.rs": {
+    "mtime": 1793890613.7419014,
+    "seen": 1793890770.1732306,
+    "ast_hash": "5086a4bb3ec2d968c5215c923d25e8f1",
+    "semantic_hash": ""
+  },
+  "home/nvf/wallpaper.lua": {
+    "mtime": 1793964738.1881194,
+    "seen": 1793964755.787339,
+    "ast_hash": "2379918d10fc3d5b8aa24eedf937cc1c",
+    "semantic_hash": ""
+  },
+  ".github/scripts/inject-exec.rs": {
+    "mtime": 1794005789.3169475,
+    "seen": 1794006039.7408133,
+    "ast_hash": "31a85cac7e25634ee2928edfa9bde5f6",
+    "semantic_hash": ""
+  },
+  "Cargo.toml": {
+    "mtime": 1794005153.1269674,
+    "seen": 1794006039.7408168,
+    "ast_hash": "08ea6d03eb6556828f9118df32135ebd",
+    "semantic_hash": ""
+  },
+  "home/system/niri/tools.rs": {
+    "mtime": 1794005853.6139455,
+    "seen": 1794006039.7408228,
+    "ast_hash": "ed51265a8fa637dac53115f9e06a8581",
+    "semantic_hash": ""
+  },
+  "home/system/suzuha-enable-integrations.rs": {
+    "mtime": 1794005789.3229475,
+    "seen": 1794006039.7408245,
+    "ast_hash": "a8aef10ce861e5256cf8e0e839d06704",
+    "semantic_hash": ""
+  },
+  "home/system/system-notifications/watch.rs": {
+    "mtime": 1794217987.87893,
+    "seen": 1794218195.1964896,
+    "ast_hash": "927dc82afa38b17b46482470a17b4676",
+    "semantic_hash": ""
+  },
+  "home/system/wallpaper-cursor/cursor.rs": {
+    "mtime": 1794218273.071921,
+    "seen": 1794218310.939456,
+    "ast_hash": "b9ee36e9ef12f92585ef1c85bf32fa75",
+    "semantic_hash": ""
+  },
+  "home/tui/nixy/test-nixy.rs": {
+    "mtime": 1794308692.3108363,
+    "seen": 1794308833.2010176,
+    "ast_hash": "90e1cbfeeb5a12cbf0c73829a694a5fc",
+    "semantic_hash": ""
+  },
+  "nixos/battery-care/firmware.rs": {
+    "mtime": 1794005789.3349476,
+    "seen": 1794006039.7408302,
+    "ast_hash": "29fd8f21b304f789eace2972800070af",
+    "semantic_hash": ""
+  },
+  "nixos/battery-care/policy.rs": {
+    "mtime": 1794005789.3439474,
+    "seen": 1794006039.7408314,
+    "ast_hash": "0f5b03ca206f5ca10276b9d1ae631471",
+    "semantic_hash": ""
+  },
+  "nixos/battery-care/ui.rs": {
+    "mtime": 1794005974.0169418,
+    "seen": 1794006039.7408328,
+    "ast_hash": "d5478e9e5fba1d6f5100c9499ea07e65",
+    "semantic_hash": ""
+  },
+  "nixos/battery-care/watch.rs": {
+    "mtime": 1794217874.5349336,
+    "seen": 1794218195.1965199,
+    "ast_hash": "7e1d896b42c11006d2df562d96dcaa68",
+    "semantic_hash": ""
+  },
+  "nixos/packages/loaf/test-chooser.rs": {
+    "mtime": 1794005789.3379476,
+    "seen": 1794006039.740836,
+    "ast_hash": "01f0a9183de84ed9d902ffaef3ef182d",
+    "semantic_hash": ""
+  },
+  "nixos/packages/termfilechooser/test-termfilechooser.rs": {
+    "mtime": 1794005789.3409474,
+    "seen": 1794006039.740861,
+    "ast_hash": "937c9a917c53206c4ef6c099971ff2e5",
+    "semantic_hash": ""
+  },
+  "rust/lib.rs": {
+    "mtime": 1794217953.750931,
+    "seen": 1794218195.196603,
+    "ast_hash": "c4f4e77019fdfbb135cbed368d80e0a7",
+    "semantic_hash": ""
+  },
+  "rust/file_watch.rs": {
+    "mtime": 1794217987.87293,
+    "seen": 1794218195.1965966,
+    "ast_hash": "499c2311b05a0604a9b8f8c9dd42677c",
+    "semantic_hash": ""
+  },
+  "nixos/packages/suzuha/amane-dbus-signal-tests.rs": {
+    "mtime": 1794388989.450993,
+    "seen": 1794389972.6248782,
+    "ast_hash": "1be077a8947104a264b305edb5199242",
     "semantic_hash": ""
   }
 }

@@ -6,7 +6,6 @@
   ...
 }: {
   home.packages = with pkgs; [
-    # I love TUIs
     caligula # User-friendly, lightweight TUI for disk imaging (ISO, USB BOOT)
     sttr # A minimalist CyberChef-like, cross-platform CLI app for performing various operations on strings
     slides # A terminal-based presentation tool that allows you to create and deliver presentations directly from the command line
@@ -27,7 +26,7 @@
     chafa # Image to ANSI/Unicode converter and more.
     pkgs-unstable.yt-dlp
 
-    pkgs-unstable.codex
+    (pkgs.callPackage ../../../nixos/packages/codex {})
     pkgs-unstable.graphify
     # Just cool
     tty-solitaire

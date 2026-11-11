@@ -1,0 +1,48 @@
+/* GTK system colors are refreshed by Suzuha whenever the wallpaper changes.
+ * Keep these as system colors: fixed hex values would only update on rebuild.
+ */
+:root {
+  /* Gecko sorts GTK's accent pair darkest first. Suzuha's dark theme uses
+   * the lighter member for accents so they remain visible on dark surfaces.
+   */
+  --zen-primary-color: light-dark(AccentColor, AccentColorText) !important;
+  --zen-colors-primary: color-mix(in srgb, var(--zen-primary-color) 20%, -moz-dialog) !important;
+  --zen-colors-secondary: color-mix(in srgb, var(--zen-primary-color) 12%, -moz-dialog) !important;
+  --zen-colors-tertiary: -moz-dialog !important;
+  --zen-colors-border: color-mix(in srgb, var(--zen-primary-color) 35%, -moz-dialog) !important;
+  --zen-dialog-background: -moz-dialog !important;
+  --zen-urlbar-background: Field !important;
+  --zen-themed-toolbar-bg: -moz-dialog !important;
+  --zen-themed-toolbar-bg-transparent: -moz-dialog !important;
+  --toolbar-bgcolor: -moz-dialog !important;
+  --toolbar-color: -moz-dialogtext !important;
+  --toolbox-textcolor: -moz-dialogtext !important;
+  --lwt-text-color: -moz-dialogtext !important;
+  --toolbar-field-background-color: Field !important;
+  --toolbar-field-color: FieldText !important;
+  --toolbar-field-focus-color: FieldText !important;
+  --tab-selected-textcolor: -moz-dialogtext !important;
+  --arrowpanel-background: -moz-dialog !important;
+  --arrowpanel-color: -moz-dialogtext !important;
+  --sidebar-background-color: -moz-dialog !important;
+  --sidebar-text-color: -moz-dialogtext !important;
+}
+
+/* Workspace gradients have inline colors; let the wallpaper own the frame. */
+#zen-browser-background {
+  --zen-main-browser-background: -moz-dialog !important;
+}
+
+#zen-toolbar-background {
+  --zen-main-browser-background-toolbar: -moz-dialog !important;
+}
+
+/* Zen also paints frame layers independently of the workspace variables. */
+#zen-browser-background::before,
+#zen-toolbar-background::before {
+  background: -moz-dialog !important;
+}
+
+zen-workspace {
+  --toolbox-textcolor: -moz-dialogtext !important;
+}

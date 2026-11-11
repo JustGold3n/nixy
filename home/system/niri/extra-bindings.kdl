@@ -67,8 +67,8 @@ Mod+Ctrl+Shift+W { set-column-display "tabbed"; }
 Mod+Shift+C { center-column; }
 Mod+Ctrl+C { center-visible-columns; }
 Mod+Ctrl+Shift+C { center-window; }
-Mod+M repeat=false { maximize-window-to-edges; }
-Mod+Shift+M repeat=false { maximize-column; }
+Mod+Shift+M repeat=false { maximize-window-to-edges; }
+Mod+M repeat=false { maximize-column; }
 Mod+Ctrl+F { expand-column-to-available-width; }
 Mod+Alt+F repeat=false { toggle-windowed-fullscreen; }
 Mod+V repeat=false { toggle-window-floating; }

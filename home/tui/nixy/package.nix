@@ -5,23 +5,24 @@
 pkgs.writeShellScriptBin "nixy"
 # bash
 ''
-  EXTRA_ARGS="''${@:2}"
-
-  function exec() {
-    $@
-  }
+  set -euo pipefail
+  config_directory=${pkgs.lib.escapeShellArg configDirectory}
+  # The standalone flake package uses a literal $HOME prefix.
+  if [[ "$config_directory" == '$HOME/'* ]]; then
+    config_directory="$HOME/''${config_directory#\$HOME/}"
+  fi
 
   function ui(){
     DEFAULT_ICON="󰘳"
 
-    # "icon;name;command"[]
+    # "icon;name;subcommand"[]; dispatch only entries from this fixed menu.
     apps=(
-      "󰑓;Rebuild;nixy rebuild"
-      "󰐊;Test;nixy test"
-      "󰚰;Update;nixy update"
-      ";Collect Garbage;nixy gc"
-      "󰍜;Clean Boot Menu;nixy cb"
-      ";List generation;nixy listgen"
+      "󰑓;Rebuild;rebuild"
+      "󰐊;Test;test"
+      "󰚰;Update;update"
+      ";Collect Garbage;gc"
+      "󰍜;Clean Boot Menu;cb"
+      ";List generation;listgen"
     )
 
     # Apply default icons if empty:
@@ -29,34 +30,45 @@ pkgs.writeShellScriptBin "nixy"
       apps[i]=$(echo "''${apps[i]}" | sed 's/^;/'$DEFAULT_ICON';/')
     done
 
-    fzf_result=$(printf "%s\n" "''${apps[@]}" | awk -F ';' '{print $1" "$2}' | fzf)
+    fzf_result=$(printf "%s\n" "''${apps[@]}" | fzf --delimiter=';' --with-nth=1,2) || exit 0
     [[ -z $fzf_result ]] && exit 0
-    fzf_result=''${fzf_result/ /;}
-    line=$(printf "%s\n" "''${apps[@]}" | grep "$fzf_result")
-    command=$(echo "$line" | sed 's/^[^;]*;//;s/^[^;]*;//')
-
-    exec "$command"
-    exit $?
+    for entry in "''${apps[@]}"; do
+      if [[ "$entry" == "$fzf_result" ]]; then
+        exec "$0" "''${entry##*;}"
+      fi
+    done
+    exit 1
   }
 
-  [[ $1 == "" ]] && ui
+  [[ $# == 0 ]] && ui
 
   if [[ $1 == "rebuild" ]];then
-    cd ${configDirectory} && git add . && sudo nixos-rebuild switch --flake . $EXTRA_ARGS
+    cd -- "$config_directory"
+    # Add new modules explicitly with git add; never stage local secrets here.
+    # Keep builders in the daemon's service, outside the terminal's OOM group.
+    sudo env NIX_REMOTE=daemon nixos-rebuild switch --flake . "''${@:2}"
   elif [[ $1 == "test" ]];then
-    cd ${configDirectory} && git add . && sudo nixos-rebuild test --flake . $EXTRA_ARGS
+    cd -- "$config_directory"
+    sudo env NIX_REMOTE=daemon nixos-rebuild test --flake . "''${@:2}"
   elif [[ $1 == "update" ]];then
-    cd ${configDirectory} && nix flake update $EXTRA_ARGS
+    cd -- "$config_directory"
+    # Read credentials at runtime; keep them out of the store and command arguments.
+    if github_token="$(${pkgs.gh}/bin/gh auth token --hostname github.com 2>/dev/null)" && [[ -n "$github_token" ]]; then
+      NIX_CONFIG="''${NIX_CONFIG-}"$'\n'"extra-access-tokens = github.com=$github_token" \
+        nix flake update "''${@:2}"
+    else
+      nix flake update "''${@:2}"
+    fi
   elif [[ $1 == "gc" ]];then
     echo "Starting Nix garbage collection..."
-    cd ${configDirectory} && \
-    echo "Cleaning up system garbage..." && \
-    sudo nix-collect-garbage -d && \
-    echo "Cleaning up user garbage..." && \
-    nix-collect-garbage -d && \
-    echo "Collecting garbage from Nix store..." && \
-    nix-store --gc && \
-    echo "Optimizing Nix store..." && \
+    cd -- "$config_directory"
+    echo "Cleaning up system garbage..."
+    sudo nix-collect-garbage -d
+    echo "Cleaning up user garbage..."
+    nix-collect-garbage -d
+    echo "Collecting garbage from Nix store..."
+    nix-store --gc
+    echo "Optimizing Nix store..."
     nix-store --optimise
     echo "Nix garbage collection complete."
   elif [[ $1 == "cb" ]];then
@@ -64,6 +76,7 @@ pkgs.writeShellScriptBin "nixy"
   elif [[ $1 == "listgen" ]];then
     sudo nix-env -p /nix/var/nix/profiles/system --list-generations
   else
-    echo "Unknown argument"
+    echo "Unknown argument" >&2
+    exit 2
   fi
 ''

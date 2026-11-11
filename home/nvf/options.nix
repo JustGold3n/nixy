@@ -35,6 +35,7 @@
         },
       }
     '';
+    luaConfigRC.wallpaper-theme = lib.nvim.dag.entryAfter ["pluginConfigs"] (builtins.readFile ./wallpaper.lua);
     theme = {
       enable = true;
       name = lib.mkForce "catppuccin";

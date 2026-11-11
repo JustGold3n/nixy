@@ -5,6 +5,7 @@
   ...
 }: let
   amane = inputs.amane.packages.${pkgs.stdenv.hostPlatform.system}.default;
+  keepawake = pkgs.callPackage ../keepawake {};
 in
   amane.overrideAttrs (old: {
     pname = "suzuha";
@@ -19,12 +20,43 @@ in
       + ''
         cp -r ${inputs.suzuha}/src cli/template/example/suzuha
         chmod -R u+w cli/template/example/suzuha
+        patch -p1 < ${./suzuha-idle.patch}
+        mkdir -p src/dbus/signal
+        cp ${./amane-dbus-signal-tests.rs} src/dbus/signal/tests.rs
         patch -p1 < ${./suzuha-auth.patch}
+        patch -p1 < ${./suzuha-lock-layout.patch}
         mkdir -p src/services/lock
         cp ${./suzuha-fingerprint.rs} src/services/lock/fingerprint.rs
         patch -p1 < ${./suzuha-workspaces.patch}
         patch -p1 < ${./suzuha-shortcuts.patch}
         patch -p1 < ${./suzuha-clipboard.patch}
+        patch -p1 < ${./suzuha-keepawake.patch}
+        substituteInPlace cli/template/example/suzuha/overlay/launcher.rs \
+          --replace-fail '@keepawake@' '${lib.getExe keepawake}'
+        patch -p1 < ${./suzuha-notifications.patch}
+        patch -p1 < ${./suzuha-status.patch}
+        cp ${./suzuha-status.rs} cli/template/example/suzuha/bar/status.rs
+        patch -p1 < ${./suzuha-battery-care.patch}
+        cp ${./suzuha-battery-care.rs} cli/template/example/suzuha/overlay/utility/battery_care.rs
+        patch -p1 < ${./suzuha-security.patch}
+        mkdir -p cli/template/example/suzuha/converter/job
+        cp ${./suzuha-private-dir.rs} cli/template/example/suzuha/converter/job/private_dir.rs
+        substituteInPlace cli/template/example/suzuha/converter/job/private_dir.rs \
+          --replace-fail '@mktemp@' '${pkgs.coreutils}/bin/mktemp'
+        substituteInPlace cli/template/example/suzuha/overlay/launcher/results.rs \
+          --replace-fail '@sh@' '${pkgs.runtimeShell}'
+        substituteInPlace cli/template/example/suzuha/overlay/control_center/art.rs \
+          --replace-fail '@curl@' '${pkgs.curl}/bin/curl'
+        patch -p1 < ${./amane-app-icons.patch}
+        patch -p1 < ${./suzuha-glass.patch}
+        cp ${./amane-background-effect.rs} src/wayland/background_effect.rs
+        cp ${./suzuha-glass.rs} cli/template/example/suzuha/glass.rs
+        mkdir -p cli/template/example/suzuha/liquid
+        cp ${./suzuha-glass-region.rs} cli/template/example/suzuha/liquid/region.rs
+        substituteInPlace cli/template/example/suzuha/liquid.rs src/wayland/background_effect.rs \
+          --replace-fail '@liquidShader@' '${./suzuha-glass.wgsl}'
+        mkdir -p src/services/apps/icons
+        cp ${./amane-app-icons-tests.rs} src/services/apps/icons/tests.rs
         cp ${./amane-tray.rs} src/tray.rs
         cp ${./suzuha-tray.rs} cli/template/example/suzuha/bar/tray.rs
         substituteInPlace src/lib.rs --replace-fail 'mod dbus;' 'mod dbus; pub mod tray;'
@@ -35,7 +67,7 @@ in
           --replace-fail 'drop(Notifications::read());' 'drop(Notifications::read()); drop(amane::tray::Tray::read());' \
           --replace-fail '.lock(lock_screen::view)' '.window_per_monitor(bar::tray::dismiss).window_per_monitor(bar::tray::popup).ipc("tray", bar::tray::ipc).lock(lock_screen::view)'
         substituteInPlace cli/template/example/suzuha/bar.rs \
-          --replace-fail 'mod system;' 'mod system; pub mod tray;' \
+          --replace-fail 'mod system;' 'mod system; mod status; pub mod tray;' \
           --replace-fail 'system::view(&theme, third)' 'system::view(&theme, third, monitor)'
         substituteInPlace cli/template/example/suzuha/bar/system.rs \
           --replace-fail 'pub fn view(theme: &Theme, width: f32)' 'pub fn view(theme: &Theme, width: f32, monitor: &amane::Monitor)' \
@@ -69,9 +101,20 @@ in
       # Nix's build sandbox has no login environment. Fixtures use fake PAM
       # policies, but the locker still needs a current-user identity to test.
       export USER=amane-test-user
+      export CARGO_BUILD_JOBS="$NIX_BUILD_CORES"
+      cargo test --offline --release --target ${pkgs.stdenv.hostPlatform.rust.rustcTarget} -p amane --lib services::apps::icons::tests
+      cargo test --offline --release --target ${pkgs.stdenv.hostPlatform.rust.rustcTarget} -p amane --lib wayland::background_effect::tests
       cargo test --offline --release --target ${pkgs.stdenv.hostPlatform.rust.rustcTarget} -p amane --lib services::pam::tests
       cargo test --offline --release --target ${pkgs.stdenv.hostPlatform.rust.rustcTarget} -p amane --lib services::lock::fingerprint::tests
       cargo test --offline --release --target ${pkgs.stdenv.hostPlatform.rust.rustcTarget} -p amane-example --bin amane-example overlay::launcher::clipboard::tests
+      cargo test --offline --release --target ${pkgs.stdenv.hostPlatform.rust.rustcTarget} -p amane-example --bin amane-example overlay::popups::tests
+      cargo test --offline --release --target ${pkgs.stdenv.hostPlatform.rust.rustcTarget} -p amane-example --bin amane-example liquid::region::tests
+      cargo test --offline --release --target ${pkgs.stdenv.hostPlatform.rust.rustcTarget} -p amane-example --bin amane-example overlay::power_menu::tests
+      cargo test --offline --release --target ${pkgs.stdenv.hostPlatform.rust.rustcTarget} -p amane-example --bin amane-example overlay::utility::battery_care::tests
+      cargo test --offline --release --target ${pkgs.stdenv.hostPlatform.rust.rustcTarget} -p amane-example --bin amane-example overlay::launcher::results::tests
+      cargo test --offline --release --target ${pkgs.stdenv.hostPlatform.rust.rustcTarget} -p amane-example --bin amane-example converter::job::
+      cargo test --offline --release --target ${pkgs.stdenv.hostPlatform.rust.rustcTarget} -p amane-example --bin amane-example overlay::control_center::art::tests
+      ${pkgs.dbus}/bin/dbus-run-session --dbus-daemon=${pkgs.dbus}/bin/dbus-daemon --config-file=${pkgs.dbus}/share/dbus-1/session.conf -- cargo test --offline --release --target ${pkgs.stdenv.hostPlatform.rust.rustcTarget} -p amane --lib dbus::signal::tests
       ${pkgs.dbus}/bin/dbus-run-session --dbus-daemon=${pkgs.dbus}/bin/dbus-daemon --config-file=${pkgs.dbus}/share/dbus-1/session.conf -- cargo test --offline --release --target ${pkgs.stdenv.hostPlatform.rust.rustcTarget} -p amane --lib tray::tests
       runHook postCheck
     '';

@@ -1,0 +1,120 @@
+--- a/cli/template/example/suzuha/overlay/utility.rs
++++ b/cli/template/example/suzuha/overlay/utility.rs
+@@ -1,3 +1,4 @@
++mod battery_care;
+ mod bluetooth;
+ mod brightness;
+ mod calendar;
+@@ -46,6 +47,7 @@
+     Wifi,
+     Bluetooth,
+     Record,
++    Battery,
+ }
+ 
+ impl Page {
+@@ -55,6 +57,7 @@
+             Page::Wifi => 1.0,
+             Page::Bluetooth => 2.0,
+             Page::Record => 3.0,
++            Page::Battery => 4.0,
+         }
+     }
+ }
+@@ -124,7 +127,7 @@
+ 
+     let mut layers: Vec<Box<dyn Widget>> = Vec::new();
+ 
+-    for page in [Page::Notifications, Page::Wifi, Page::Bluetooth, Page::Record] {
++    for page in [Page::Notifications, Page::Wifi, Page::Bluetooth, Page::Record, Page::Battery] {
+         let offset = page.index() - shown;
+ 
+         // only pages at least partly in view are built
+@@ -137,6 +140,7 @@
+             Page::Wifi => wifi::view(overlay, theme, INNER_WIDTH, height),
+             Page::Bluetooth => bluetooth::view(overlay, theme, INNER_WIDTH, height),
+             Page::Record => record::view(overlay, theme, INNER_WIDTH, height),
++            Page::Battery => battery_care::view(overlay, theme, INNER_WIDTH, height),
+         };
+ 
+         let slot = Rectangle::new()
+@@ -168,7 +172,7 @@
+     match overlay.page {
+         Page::Wifi => Network::scan(),
+         Page::Bluetooth => Bluetooth::start_scan(),
+-        Page::Notifications | Page::Record => {}
++        Page::Notifications | Page::Record | Page::Battery => {}
+     }
+ }
+ 
+@@ -190,6 +194,7 @@
+         Some("wifi") => Some(Page::Wifi),
+         Some("bluetooth") => Some(Page::Bluetooth),
+         Some("record") => Some(Page::Record),
++        Some("battery") => Some(Page::Battery),
+         _ => None,
+     };
+ 
+--- a/cli/template/example/suzuha/overlay/utility/tabs.rs
++++ b/cli/template/example/suzuha/overlay/utility/tabs.rs
+@@ -22,7 +22,7 @@
+     icon: &'static str,
+ }
+ 
+-const TABS: [Tab; 4] = [
++const TABS: [Tab; 5] = [
+     Tab {
+         page: Page::Notifications,
+         name: "notifications",
+@@ -42,6 +42,11 @@
+         page: Page::Record,
+         name: "record",
+         icon: "󰕧",
++    },
++    Tab {
++        page: Page::Battery,
++        name: "battery",
++        icon: "󰁹",
+     },
+ ];
+ 
+@@ -76,7 +81,11 @@
+ 
+     // the group's two ends stay fully round
+     let left = if index == 0 { HEIGHT / 2.0 } else { radius };
+-    let right = if index == TABS.len() - 1 { HEIGHT / 2.0 } else { radius };
++    let right = if index == TABS.len() - 1 {
++        HEIGHT / 2.0
++    } else {
++        radius
++    };
+ 
+     let fill = if active {
+         theme.accent
+@@ -103,10 +112,21 @@
+         .on_click(move |_| select(page))
+         .align_child(Center, Center)
+         .child(
+-            Text::new(tab.icon)
+-                .size(18.0)
+-                .font(fonts::NERD)
+-                .tight()
+-                .color(icon_color),
++            Rectangle::new()
++                .width(22.0)
++                .height(22.0)
++                .rotate(if page == Page::Battery { 90.0 } else { 0.0 })
++                .align_child(Center, Center)
++                .child(
++                    Text::new(if page == Page::Battery {
++                        super::battery_care::tab_icon()
++                    } else {
++                        tab.icon
++                    })
++                    .size(18.0)
++                    .font(fonts::NERD)
++                    .tight()
++                    .color(icon_color),
++                ),
+         )
+ }

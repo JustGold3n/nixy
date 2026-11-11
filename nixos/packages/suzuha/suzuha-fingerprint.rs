@@ -14,6 +14,21 @@ const PAMTESTER: &str = "@pamtester@";
 const POLL: Duration = Duration::from_millis(25);
 
 impl Lock {
+    /// Reclaim the reader after a lid-open or wake event without changing the lock.
+    pub fn restart_fingerprint() {
+        let lock = Self::read();
+        // Wake hooks also run on an unlocked desktop. Only the compositor's
+        // locked acknowledgement may start fingerprint authentication.
+        if !lock.unlocked
+            && lock
+                .fingerprint
+                .as_ref()
+                .is_some_and(|attempt| !attempt.aborted())
+        {
+            lock.fingerprint_restart.store(true, Ordering::Release);
+        }
+    }
+
     pub(crate) fn start_fingerprint() {
         let Ok(user) = std::env::var("USER") else {
             return;
@@ -124,7 +139,7 @@ fn verify_once(
             break Ok(None);
         }
         if restart.swap(false, Ordering::AcqRel) {
-            // A password failure also recovers a reader stuck after suspend.
+            // Wake events and password failures recover a stuck reader.
             // Reap this helper before the retry loop claims the reader again.
             break Ok(Some(false));
         }
@@ -208,6 +223,84 @@ mod tests {
         assert!(Lock::read().fingerprint_restart.load(Ordering::Acquire));
         Lock::fingerprint_accepted(&finger);
         assert!(Lock::read().unlocked());
+        Lock::reset();
+    }
+
+    #[test]
+    fn wake_restarts_a_stuck_scan_without_cancelling_password() {
+        use std::time::{SystemTime, UNIX_EPOCH};
+
+        let _serial = SERIAL.lock().unwrap();
+        let finger = setup();
+        let password = Arc::new(Session::default());
+        let restart = {
+            let mut lock = Lock::write();
+            lock.attempt = Some(password.clone());
+            lock.checking = true;
+            lock.fingerprint_restart.clone()
+        };
+        let marker = std::env::temp_dir().join(format!(
+            "amane-fingerprint-wake-{}-{}",
+            std::process::id(),
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos(),
+        ));
+        let worker_marker = marker.clone();
+        let worker_finger = finger.clone();
+        let worker = thread::spawn(move || {
+            verify_until_accepted(
+                Command::new("sh")
+                    .args([
+                        "-c",
+                        "if test -e \"$1\"; then exit 0; fi; : > \"$1\"; exec sleep 5",
+                        "test",
+                    ])
+                    .arg(worker_marker),
+                &worker_finger,
+                &restart,
+            )
+        });
+        // Wait for the first helper to be running before simulating wake.
+        for _ in 0..80 {
+            if marker.exists() {
+                break;
+            }
+            thread::sleep(POLL);
+        }
+        assert!(marker.exists(), "fingerprint helper did not start");
+        let start = Instant::now();
+        Lock::restart_fingerprint();
+        Lock::restart_fingerprint(); // Lid-open and resume can arrive together.
+        assert!(!finger.aborted());
+        assert!(!password.aborted());
+        assert!(Lock::read().checking());
+        assert!(!Lock::read().unlocked());
+        assert!(worker.join().unwrap());
+        assert!(start.elapsed() < Duration::from_secs(2));
+        std::fs::remove_file(marker).unwrap();
+
+        // Only the new helper's successful verification may unlock the session.
+        Lock::fingerprint_accepted(&finger);
+        assert!(Lock::read().unlocked());
+        assert!(password.aborted());
+        Lock::reset();
+    }
+
+    #[test]
+    fn wake_is_ignored_without_an_active_fingerprint_scan() {
+        let _serial = SERIAL.lock().unwrap();
+        Lock::reset();
+        Lock::restart_fingerprint();
+        assert!(Lock::read().fingerprint.is_none());
+        assert!(!Lock::read().fingerprint_restart.load(Ordering::Acquire));
+
+        let finger = setup();
+        Lock::fingerprint_accepted(&finger);
+        Lock::restart_fingerprint();
+        assert!(Lock::read().fingerprint.is_none());
+        assert!(!Lock::read().fingerprint_restart.load(Ordering::Acquire));
         Lock::reset();
     }
 

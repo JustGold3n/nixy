@@ -41,9 +41,7 @@
     options = ["fmask=0077" "dmask=0077"];
   };
 
-  swapDevices = [
-    {device = "/dev/mapper/luks-40e784fb-5794-4c09-926a-46dd38aa2b11";}
-  ];
+  # Swap is managed in ../../nixos/laptop-memory.nix.
 
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
   hardware.cpu.intel.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;

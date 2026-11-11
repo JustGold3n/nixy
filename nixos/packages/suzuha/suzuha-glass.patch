@@ -1,0 +1,532 @@
+--- a/cli/template/example/suzuha/bar.rs
++++ b/cli/template/example/suzuha/bar.rs
+@@ -20,8 +20,6 @@
+ use crate::theme;
+ 
+ use reveal::Reveal;
+-
+-const CORNER_RADIUS: f32 = 16.0;
+ 
+ pub const ITEM_HEIGHT: f32 = 26.0;
+ 
+@@ -79,18 +77,12 @@
+         system::view(&theme, third),
+     ]);
+ 
+-    // taller than the bar and clipped, so only the corners away from the edge come out rounded
++    // Match the connected panels exactly at their join. A separate gradient or
++    // border here makes a visible seam; the screen mask owns the outer corners.
+     let background = Rectangle::new()
+         .width(Parent)
+-        .height(height + CORNER_RADIUS)
+-        .radius(CORNER_RADIUS)
+-        .fill(theme.background);
+-
+-    let background = if bottom {
+-        background.translate(0.0, -CORNER_RADIUS)
+-    } else {
+-        background
+-    };
++        .height(height)
++        .fill(crate::glass::tint(&theme));
+ 
+     let content = Rectangle::new()
+         .width(Parent)
+@@ -114,13 +106,11 @@
+ 
+     let space = if hides { Zone::Ignore } else { Zone::Reserve };
+ 
+-    // a hiding bar leaves no black strip behind
+-    let behind = if hides { Color::TRANSPARENT } else { Color::BLACK };
+-
+-    // black behind the rounded corners, so the screen's corners look rounded too
++    // The compositor supplies the blurred wallpaper behind the glass.
+     LayerWindow::new()
+         .width(Full)
+         .height(window_height)
++        .namespace("suzuha-bar")
+         .anchor_vertical(edge)
+         .layer(Layer::Top)
+         .space(space)
+@@ -128,7 +118,7 @@
+             Rectangle::new()
+                 .width(Parent)
+                 .height(Parent)
+-                .fill(behind)
++                .fill(Color::TRANSPARENT)
+                 .opacity(if focused { 0.0 } else { Curtain::read().items.value() })
+                 .clip()
+                 .on_hover(reveal::hover)
+--- a/cli/template/example/suzuha/converter.rs
++++ b/cli/template/example/suzuha/converter.rs
+@@ -258,7 +258,8 @@
+     let frame = Rectangle::new()
+         .width(Parent)
+         .height(Parent)
+-        .fill(theme.background)
++        .fill(crate::glass::fill(&theme))
++        .border(1.0, crate::glass::edge(&theme))
+         .padding(MARGIN)
+         .child(content);
+ 
+@@ -360,7 +361,7 @@
+ 
+     let x = motion::follow("converter-tab", open_index as f32 * tab_width, motion::DEFAULT_SPATIAL);
+ 
+-    let track = Rectangle::new().width(width).height(TABS_HEIGHT).radius(Full).fill(theme.surface);
++    let track = Rectangle::new().width(width).height(TABS_HEIGHT).radius(Full).fill(crate::glass::card(&theme));
+ 
+     let indicator = Rectangle::new()
+         .width(tab_width)
+@@ -386,7 +387,7 @@
+         .width(width)
+         .height(height)
+         .radius(28.0)
+-        .fill(theme.surface)
++        .fill(crate::glass::card(&theme))
+         .on_drop(add);
+ 
+     if queue.files.is_empty() {
+--- a/cli/template/example/suzuha/floating/card.rs
++++ b/cli/template/example/suzuha/floating/card.rs
+@@ -14,18 +14,14 @@
+ 
+ const BAR_HEIGHT: f32 = 5.0;
+ 
+-// how much of the card's color covers the wallpaper behind it
+-const SURFACE_ALPHA: u8 = 200;
+-
+ // the rounded, see-through base every desktop card sits on
+ pub fn background(theme: &Theme, width: f32, height: f32) -> Rectangle {
+-    let surface = theme.surface;
+-
+     Rectangle::new()
+         .width(width)
+         .height(height)
+         .radius(RADIUS)
+-        .fill(Color::rgba(surface.red(), surface.green(), surface.blue(), SURFACE_ALPHA))
++        .fill(crate::glass::fill(theme))
++        .border(1.0, crate::glass::edge(theme))
+         .padding(Padding {
+             top: PADDING,
+             right: PADDING,
+--- a/cli/template/example/suzuha/liquid.rs
++++ b/cli/template/example/suzuha/liquid.rs
+@@ -1,4 +1,5 @@
+-use std::env;
++mod region;
++pub use region::blur_region;
+ 
+ use amane::{Color, Parent, Rectangle, Stack, Widget};
+ 
+@@ -10,7 +11,7 @@
+ pub const CONNECTION: f32 = 24.0;
+ 
+ // a soft black shadow under the blobs, sitting a little lower than them
+-const SHADOW_OPACITY: f32 = 0.31;
++const SHADOW_OPACITY: f32 = 0.18;
+ const SHADOW_BLUR: f32 = 10.0;
+ const SHADOW_OFFSET: f32 = 4.0;
+ 
+@@ -137,9 +138,7 @@
+     values
+ }
+ 
+-// the shader lives next to the config's src folder
++// Keep the shader and its Rust uniforms in the same package generation.
+ fn shader_path() -> String {
+-    let home = env::var("HOME").expect("failed to find home: HOME is not set");
+-
+-    format!("{home}/.config/amane/shaders/liquid.wgsl")
++    String::from("@liquidShader@")
+ }
+--- a/cli/template/example/suzuha/main.rs
++++ b/cli/template/example/suzuha/main.rs
+@@ -4,6 +4,7 @@
+ mod devices;
+ mod floating;
+ mod fonts;
++mod glass;
+ mod focus;
+ mod integrations;
+ mod liquid;
+--- a/cli/template/example/suzuha/overlay/control_center/media.rs
++++ b/cli/template/example/suzuha/overlay/control_center/media.rs
+@@ -82,7 +82,7 @@
+         .width(width)
+         .height(height)
+         .radius(RADIUS)
+-        .fill(theme.surface)
++        .fill(amane::Color::TRANSPARENT)
+         .padding(Padding {
+             top: PADDING,
+             right: side_padding,
+--- a/cli/template/example/suzuha/overlay/control_center.rs
++++ b/cli/template/example/suzuha/overlay/control_center.rs
+@@ -124,7 +124,7 @@
+         .width(FADERS_WIDTH)
+         .height(INNER_HEIGHT)
+         .radius(CARD_RADIUS)
+-        .fill(theme.surface)
++        .fill(amane::Color::TRANSPARENT)
+         .align_child(Center, Center)
+         .child(row)
+ }
+--- a/cli/template/example/suzuha/overlay/launcher.rs
++++ b/cli/template/example/suzuha/overlay/launcher.rs
+@@ -159,7 +159,7 @@
+         .width(inner_width)
+         .height(FIELD_HEIGHT)
+         .radius(INNER_RADIUS)
+-        .fill(theme.surface)
++        .fill(crate::glass::card(&theme))
+         .padding(Padding {
+             top: 0.0,
+             right: 14.0,
+--- a/cli/template/example/suzuha/overlay/utility/brightness.rs
++++ b/cli/template/example/suzuha/overlay/utility/brightness.rs
+@@ -159,7 +159,7 @@
+         .width(width)
+         .height(HEIGHT)
+         .radius(SLIDER_RADIUS)
+-        .fill(theme.surface)
++        .fill(crate::glass::card(&theme))
+         .cursor(Pointer)
+         .on_drag(move |point| drag(point, track_width));
+ 
+--- a/cli/template/example/suzuha/overlay/utility/calendar.rs
++++ b/cli/template/example/suzuha/overlay/utility/calendar.rs
+@@ -110,7 +110,7 @@
+         .width(width)
+         .height(HEIGHT)
+         .radius(16.0)
+-        .fill(theme.surface)
++        .fill(amane::Color::TRANSPARENT)
+         .padding(Padding {
+             top: PADDING,
+             right: PADDING,
+--- a/cli/template/example/suzuha/overlay/utility/header.rs
++++ b/cli/template/example/suzuha/overlay/utility/header.rs
+@@ -80,7 +80,7 @@
+         .width(width)
+         .height(HEIGHT)
+         .radius(16.0)
+-        .fill(theme.surface)
++        .fill(amane::Color::TRANSPARENT)
+         .padding(Padding {
+             top: PADDING,
+             right: PADDING,
+--- a/cli/template/example/suzuha/overlay/utility/notifications.rs
++++ b/cli/template/example/suzuha/overlay/utility/notifications.rs
+@@ -254,7 +254,7 @@
+         .width(width)
+         .height(height)
+         .radius(style.radius)
+-        .fill(theme.surface)
++        .fill(crate::glass::card(&theme))
+         .padding(padding)
+         .align_child(Start, Center)
+         .child(Column::new(rows).height(inner_height).gap(ACTIONS_GAP));
+--- a/cli/template/example/suzuha/overlay/utility/record.rs
++++ b/cli/template/example/suzuha/overlay/utility/record.rs
+@@ -99,7 +99,7 @@
+         .width(width)
+         .height(header::HEIGHT)
+         .radius(16.0)
+-        .fill(theme.surface)
++        .fill(amane::Color::TRANSPARENT)
+         .padding(Padding {
+             top: HEADER_PADDING,
+             right: HEADER_PADDING,
+--- a/cli/template/example/suzuha/overlay.rs
++++ b/cli/template/example/suzuha/overlay.rs
+@@ -119,6 +119,8 @@
+         screen_height: screen.height,
+     };
+ 
++    let blur = liquid::blur_region(&blobs, &placement, reach.width, reach.height);
++
+     let margin = Margin {
+         top: reach.y as i32,
+         right: 0,
+@@ -129,6 +131,8 @@
+     LayerWindow::new()
+         .width(reach.width)
+         .height(reach.height)
++        .namespace("suzuha-panels")
++        .blur_region(blur)
+         .anchor_vertical(Vertical::Top)
+         .anchor_horizontal(Horizontal::Left)
+         .margin(margin)
+@@ -142,7 +146,7 @@
+                 .width(Parent)
+                 .height(Parent)
+                 .opacity(Curtain::read().items.value())
+-                .child(liquid::view(theme.background, blobs, placement)),
++                .child(liquid::view(crate::glass::tint(&theme), blobs, placement)),
+         )
+ }
+ 
+@@ -179,6 +183,8 @@
+     LayerWindow::new()
+         .width(1.0)
+         .height(1.0)
++        .namespace("suzuha-panels")
++        .blur_region(Vec::new())
+         .anchor_vertical(Vertical::Top)
+         .anchor_horizontal(Horizontal::Left)
+         .layer(Layer::Top)
+--- a/cli/template/example/suzuha/pomodoro.rs
++++ b/cli/template/example/suzuha/pomodoro.rs
+@@ -235,7 +235,8 @@
+     let frame = Rectangle::new()
+         .width(Parent)
+         .height(Parent)
+-        .fill(theme.background)
++        .fill(crate::glass::fill(&theme))
++        .border(1.0, crate::glass::edge(&theme))
+         .padding(MARGIN)
+         .child(content);
+ 
+--- a/cli/template/example/suzuha/settings/dialog.rs
++++ b/cli/template/example/suzuha/settings/dialog.rs
+@@ -91,7 +91,7 @@
+         .width(width)
+         .height(height)
+         .radius(20.0)
+-        .fill(theme.surface)
++        .fill(crate::glass::card(&theme))
+         .padding(Padding {
+             top: 22.0,
+             right: 22.0,
+--- a/cli/template/example/suzuha/settings/navigation.rs
++++ b/cli/template/example/suzuha/settings/navigation.rs
+@@ -56,7 +56,7 @@
+         .width(WIDTH)
+         .height(height)
+         .radius(20.0)
+-        .fill(theme.surface)
++        .fill(crate::glass::card(&theme))
+         .clip()
+         .child(Stack::new(children![selection, list]).width(WIDTH).height(height))
+ }
+--- a/cli/template/example/suzuha/settings/pages/colors.rs
++++ b/cli/template/example/suzuha/settings/pages/colors.rs
+@@ -147,7 +147,7 @@
+         .width(page.width)
+         .height(PREVIEW_HEIGHT)
+         .radius(20.0)
+-        .fill(theme.surface)
++        .fill(crate::glass::card(&theme))
+         .padding(Padding {
+             top: 0.0,
+             right: 20.0,
+--- a/cli/template/example/suzuha/settings.rs
++++ b/cli/template/example/suzuha/settings.rs
+@@ -222,7 +222,8 @@
+     let frame = Rectangle::new()
+         .width(Parent)
+         .height(Parent)
+-        .fill(theme.background)
++        .fill(crate::glass::fill(&theme))
++        .border(1.0, crate::glass::edge(&theme))
+         .padding(MARGIN)
+         .child(Column::new(children![header(&theme, layout.width), body]).gap(HEADER_GAP));
+ 
+--- a/src/layer_window.rs
++++ b/src/layer_window.rs
+@@ -21,6 +21,7 @@
+ 
+     // none means the whole window takes the pointer
+     pub(crate) input_region: Option<Vec<InputArea>>,
++    pub(crate) blur_region: Option<Vec<InputArea>>,
+ 
+     pub(crate) root: Option<Box<dyn Widget>>,
+ 
+@@ -181,6 +182,12 @@
+         self
+     }
+ 
++    // The visible glass only; an empty region explicitly disables background blur.
++    pub fn blur_region(mut self, areas: Vec<InputArea>) -> Self {
++        self.blur_region = Some(areas);
++        self
++    }
++
+     // no area takes the pointer, so every click goes to the windows below
+     pub fn click_through(self) -> Self {
+         self.input_region(Vec::new())
+@@ -227,6 +234,7 @@
+             visible: true,
+ 
+             input_region: None,
++            blur_region: None,
+ 
+             root: None,
+ 
+--- a/src/wayland/surface.rs
++++ b/src/wayland/surface.rs
+@@ -56,6 +56,9 @@
+ 
+     // none at whole scales; dropped before the role, since it belongs to its surface
+     pub fractional: Option<Fractional>,
++
++    pub background_effect: Option<super::background_effect::Effect>,
++    pub blur_manager: Option<super::background_effect::Manager>,
+ 
+     pub role: Role,
+ 
+--- a/src/wayland/update.rs
++++ b/src/wayland/update.rs
+@@ -21,6 +21,9 @@
+         };
+ 
+         self.update_input_region(window);
++        if matches!(self.role, Role::Layer { .. }) {
++            self.update_blur_region(window);
++        }
+ 
+         // the compositor sizes lock screens itself, and never lets them hide
+         let Role::Layer {
+@@ -105,7 +108,7 @@
+ }
+ 
+ // round outward so a fractional scale does not leave the edge of a clickable area out
+-fn scaled_region(area: InputArea, scale_factor: ScaleFactor) -> InputArea {
++pub(super) fn scaled_region(area: InputArea, scale_factor: ScaleFactor) -> InputArea {
+     let factor = f64::from(scale_factor.get());
+     let x = (f64::from(area.x) * factor).floor() as i32;
+     let y = (f64::from(area.y) * factor).floor() as i32;
+--- a/src/wayland/windows.rs
++++ b/src/wayland/windows.rs
+@@ -89,6 +89,9 @@
+ 
+             fractional,
+ 
++            background_effect: None,
++            blur_manager: self.blur_manager.clone(),
++
+             role,
+ 
+             compositor: self.compositor.wl_compositor().clone(),
+--- a/src/wayland.rs
++++ b/src/wayland.rs
+@@ -1,4 +1,5 @@
+ mod compositor;
++mod background_effect;
+ mod dropped;
+ mod keyboard;
+ mod layer;
+@@ -70,6 +71,7 @@
+     // both are needed for fractional scales like 1.25, none when the compositor lacks one
+     fractional_scale: Option<WpFractionalScaleManagerV1>,
+     viewporter: Option<WpViewporter>,
++    blur_manager: Option<background_effect::Manager>,
+ 
+     /*
+      * the lock screen's view, what asks the compositor for a lock (kept, so
+@@ -130,6 +132,7 @@
+ 
+         let fractional_scale = globals.bind(&qh, 1..=1, ()).ok();
+         let viewporter = globals.bind(&qh, 1..=1, ()).ok();
++        let blur_manager = globals.bind(&qh, 1..=1, ()).ok();
+ 
+         let data_device_manager = DataDeviceManagerState::bind(&globals, &qh).ok();
+ 
+@@ -154,6 +157,7 @@
+ 
+             fractional_scale,
+             viewporter,
++            blur_manager,
+ 
+             lock_view,
+             lock_state: None,
+--- a/cli/template/example/suzuha/screen_mask.rs
++++ b/cli/template/example/suzuha/screen_mask.rs
+@@ -1,17 +1,11 @@
+-use amane::{Full, Layer, LayerWindow, Mask, Monitor, Parent, Rectangle, Service, Zone};
++use amane::{Color, Full, Layer, LayerWindow, Mask, Monitor, Parent, Rectangle, Service, Zone};
+ 
+ use crate::lock_screen::Curtain;
+-use crate::theme;
+ use crate::wallpaper::SCREEN_RADIUS;
+ 
+-/*
+- * the bar's color with a rounded hole the size of the area below the bar,
+- * above windows, so the screen's corners look rounded like the bar flows
+- * into them; it takes no clicks
+- */
++// Round the physical display, including the bar. Respecting its exclusive
++// zone puts these dark wedges below the bar instead of at the screen corners.
+ pub fn view(_monitor: &Monitor) -> LayerWindow {
+-    let theme = theme::current();
+-
+     let hole = Rectangle::new()
+         .width(Parent)
+         .height(Parent)
+@@ -21,15 +15,15 @@
+     LayerWindow::new()
+         .width(Full)
+         .height(Full)
+-        .layer(Layer::Top)
+-        .space(Zone::Respect)
++        .layer(Layer::Overlay)
++        .space(Zone::Ignore)
+         .namespace("screen-mask")
+         .click_through()
+         .child(
+             Rectangle::new()
+                 .width(Parent)
+                 .height(Parent)
+-                .fill(theme.background)
++                .fill(Color::BLACK)
+                 .opacity(Curtain::read().items.value())
+                 .child(hole),
+         )
+--- a/cli/template/example/suzuha/wallpaper.rs
++++ b/cli/template/example/suzuha/wallpaper.rs
+@@ -11,7 +11,6 @@
+     Zone, children,
+ };
+ 
+-use crate::bar;
+ use crate::lock_screen::{self, Curtain};
+ use crate::settings::Settings;
+ use crate::theme;
+@@ -20,11 +19,9 @@
+ pub use shuffle::Shuffle;
+ pub use state::{Wallpaper, choose};
+ 
+-// only seen while the wallpaper rises in, the screen mask rounds the corners after that
+-const FRAME_RADIUS: f32 = 28.0;
+-
+-// the rounded edge of the area below the bar, the same as the screen mask's
++// The wallpaper frame and mask share the physical display corners.
+ pub const SCREEN_RADIUS: f32 = 16.0;
++const FRAME_RADIUS: f32 = SCREEN_RADIUS;
+ 
+ const SHADOW: Color = Color::rgba(0, 0, 0, 0x50);
+ const SHADOW_BLUR: f32 = 8.0;
+@@ -38,7 +35,7 @@
+     let curtain = Curtain::read();
+ 
+     // square once the screen mask fades for a lock, matching the lock screen
+-    let radius = FRAME_RADIUS * curtain.items.value();
++    let radius = SCREEN_RADIUS * curtain.items.value();
+ 
+     let width = monitor.width as f32;
+     let height = monitor.height as f32;
+@@ -82,11 +79,10 @@
+         }
+     }
+ 
+-    // pressed into the area below the bar, so its edge reads as the screen's edge
++    // Keep the shadow at the physical display edge, not across the panel join.
+     let shadow = Rectangle::new()
+         .width(Parent)
+-        .height(height - bar::reserved())
+-        .translate(0.0, bar::reserved_top())
++        .height(height)
+         .radius(SCREEN_RADIUS)
+         .shadow(Shadow::inner(SHADOW).blur(SHADOW_BLUR))
+         .opacity(curtain.items.value());

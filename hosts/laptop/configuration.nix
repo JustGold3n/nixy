@@ -7,6 +7,9 @@
     #../../nixos/nvidia.nix # CHANGEME: Remove this line if you don't have an Nvidia GPU
     ../../nixos/audio.nix
     ../../nixos/bluetooth.nix
+    ../../nixos/battery-care
+    ../../nixos/laptop-memory.nix
+    ../../nixos/laptop-power.nix
     ../../nixos/fonts.nix
     ../../nixos/fingerprint.nix
     ../../nixos/home-manager.nix
@@ -31,6 +34,9 @@
     ./hardware-configuration.nix
     ./variables.nix
   ];
+
+  # Initialize the full-width console before the disk unlock prompt is printed.
+  boot.kernelParams = ["fbcon=nodefer"];
 
   home-manager.users."${config.var.username}" = import ./home.nix;
 

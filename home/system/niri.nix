@@ -9,6 +9,7 @@
   niri = osConfig.programs.niri.package;
   colors = config.lib.stylix.colors;
   amane = "${scripts.suzuha}/bin/amane";
+  fingerprintRestart = "${amane} ipc call fingerprint-restart";
   # Niri resolves letter shortcuts across layouts, but number-row symbols need
   # explicit aliases for the same physical keys on Czech keyboards.
   czechNumberKeys = ["plus" "ecaron" "scaron" "ccaron" "rcaron" "zcaron" "yacute" "aacute" "iacute"];
@@ -18,9 +19,9 @@
     (builtins.elemAt czechNumberKeys (i - 1));
   tools = pkgs.writeShellApplication {
     name = "niri-tools";
-    runtimeInputs = [niri pkgs.foot pkgs.python3 pkgs.fzf];
+    runtimeInputs = [niri pkgs.foot pkgs.fzf];
     text = ''
-      exec python3 ${./niri/tools.py} "$@"
+      exec ${pkgs.callPackage ../../nixos/packages/nixy-tools {}}/bin/niri-tools "$@"
     '';
   };
   scratch = pkgs.writeShellApplication {
@@ -51,8 +52,28 @@
       exit 1
     '';
   };
+  wake = pkgs.writeShellApplication {
+    name = "suzuha-wake";
+    runtimeInputs = [niri];
+    text = ''
+      niri msg action power-on-monitors || true
+      exec ${fingerprintRestart}
+    '';
+  };
+  keepawake = pkgs.callPackage ../../nixos/packages/keepawake {};
+  # Gate timeout actions only; before-sleep locking must always remain active.
+  idleCommand = command:
+    lib.getExe (pkgs.writeShellApplication {
+      name = "swayidle-unless-keepawake";
+      text = ''
+        if [[ ! -e "''${XDG_RUNTIME_DIR:?}/keepawake.enabled" ]]; then
+          exec ${command}
+        fi
+      '';
+    });
 in {
   home.packages = with pkgs; [
+    keepawake
     brightnessctl
     playerctl
     papirus-icon-theme
@@ -82,21 +103,23 @@ in {
     systemdTargets = ["niri.service"];
     events = {
       before-sleep = lib.getExe lock;
-      after-resume = "${niri}/bin/niri msg action power-on-monitors";
+      after-resume = lib.getExe wake;
     };
     timeouts = [
       {
         timeout = 300;
-        command = lib.getExe lock;
+        command = idleCommand (lib.getExe lock);
+        resumeCommand = fingerprintRestart;
       }
       {
-        timeout = 720;
-        command = "${niri}/bin/niri msg action power-off-monitors";
-        resumeCommand = "${niri}/bin/niri msg action power-on-monitors";
+        # Lock first, then switch the panel off after one more idle minute.
+        timeout = 360;
+        command = idleCommand "${niri}/bin/niri msg action power-off-monitors";
+        resumeCommand = lib.getExe wake;
       }
       {
         timeout = 1800;
-        command = "${pkgs.systemd}/bin/systemctl suspend";
+        command = idleCommand "${pkgs.systemd}/bin/systemctl suspend";
       }
     ];
   };
@@ -154,6 +177,11 @@ in {
       focus-follows-mouse max-scroll-amount="0%"
     }
 
+    // Switch events run while locked too, including lid-open without suspend.
+    switch-events {
+      lid-open { spawn "${amane}" "ipc" "call" "fingerprint-restart"; }
+    }
+
     output "eDP-1" {
       scale 1
     }
@@ -181,9 +209,34 @@ in {
       border { off; }
     }
     prefer-no-csd
+    // Broad, softly textured frost. Applications make their backgrounds
+    // translucent while keeping text opaque. Blur strength is global in Niri.
+    blur {
+      passes 5
+      offset 4.0
+      noise 0.035
+      saturation 1.15
+    }
     layer-rule {
       match namespace="^wallpaper$"
       place-within-backdrop true
+    }
+    layer-rule {
+      match namespace="^suzuha-(bar|panels)$"
+      background-effect {
+        blur true
+        xray true
+      }
+    }
+    // Panels supply an animated blur region, so this shared frost stays
+    // inside their shapes and leaves the gaps between panels untouched.
+    layer-rule {
+      match namespace="^amane-tray-menu$"
+      geometry-corner-radius 12
+      background-effect {
+        blur true
+        xray true
+      }
     }
     screenshot-path "~/Pictures/Screenshots/%Y-%m-%d_%H-%M-%S.png"
     hotkey-overlay { skip-at-startup; }
@@ -194,8 +247,27 @@ in {
       clip-to-geometry true
     }
     window-rule {
+      match app-id=r#"^(foot|footclient|niri-tools|amane)$"#
+      background-effect {
+        blur true
+        xray true
+      }
+    }
+    window-rule {
       match app-id=r#"^(org\.keepassxc\.KeePassXC|keepassxc)$"#
       open-focused false
+    }
+    window-rule {
+      match app-id=r#"^(ONLYOFFICE)$"#
+      open-focused true
+      open-maximized true
+      open-maximized-to-edges false
+    }
+    window-rule {
+      match app-id=r#"^(thunderbird)$"#
+      open-focused true
+      open-maximized true
+      open-maximized-to-edges false
     }
     window-rule {
       match app-id=r#"^(thunderbird|Thunderbird|org\.mozilla\.Thunderbird)$"#
@@ -205,14 +277,25 @@ in {
       match app-id=r#"(?i)^(zen|zen-browser|zen-twilight|app\.zen_browser\.zen)$"#
       exclude title="^Picture-in-Picture$"
       open-maximized true
-      open-maximized-to-edges false
+      open-maximized-to-edges true
     }
     window-rule {
       match app-id=r#"(?i)^(steam|com\.valvesoftware\.Steam)$"#
-      match app-id=r#"(?i)^(discord|discordcanary|discordptb|legcord|com\.discordapp\.Discord|io\.github\.legcord\.legcord)$"#
+      match app-id=r#"(?i)^(discord|discordcanary|discordptb|vesktop|com\.discordapp\.Discord|dev\.vencord\.Vesktop)$"#
       default-column-width { proportion 0.75; }
-      open-maximized false
+      open-maximized true
       open-maximized-to-edges false
+    }
+    // Steam's X11 desktop toasts otherwise open in the floating layout's center.
+    window-rule {
+      match app-id=r#"(?i)^(steam|com\.valvesoftware\.Steam)$"# title=r#"^notificationtoasts_.*_desktop$"#
+      open-floating true
+      open-focused false
+      default-column-width {}
+      default-window-height {}
+      default-floating-position x=16 y=16 relative-to="bottom-right"
+      focus-ring { off; }
+      border { off; }
     }
     window-rule {
       match app-id="^niri-tools$"
@@ -228,7 +311,7 @@ in {
       Mod+X repeat=false hotkey-overlay-title="Power menu" { spawn "${amane}" "ipc" "call" "power"; }
       Mod+Y repeat=false hotkey-overlay-title="Background apps / system tray" { spawn "${amane}" "ipc" "call" "tray"; }
       Mod+Return { spawn "${pkgs.foot}/bin/foot"; }
-      Mod+E { spawn "loaf"; }
+      Mod+E { spawn "loaf" "--new-window"; }
       Mod+T { spawn "${config.programs.zen-browser.package}/bin/zen-twilight"; }
       Mod+D { spawn "amane" "ipc" "call" "launcher" "toggle"; }
       Mod+Space { spawn "amane" "ipc" "call" "launcher" "toggle"; }
@@ -244,7 +327,7 @@ in {
       Mod+Q { close-window; }
       Mod+F { fullscreen-window; }
       Mod+Shift+F { toggle-window-floating; }
-      Mod+Shift+D repeat=false hotkey-overlay-title="Toggle focus mode" { spawn "${amane}" "ipc" "call" "focus"; }
+      // Mod+Shift+D repeat=false hotkey-overlay-title="Toggle focus mode" { spawn "${amane}" "ipc" "call" "focus"; }
       Mod+S repeat=false hotkey-overlay-title="Toggle scratch workspace" { spawn "${lib.getExe scratch}"; }
       Mod+Shift+S repeat=false hotkey-overlay-title="Send window to scratch" { move-window-to-workspace "scratch" focus=false; }
       Mod+Tab { toggle-overview; }
@@ -303,6 +386,7 @@ in {
     }
     // Suzuha exports its wallpaper-derived palette; Niri watches for changes.
     include optional=true "${config.home.homeDirectory}/.local/state/amane/niri-colors.kdl"
+    include optional=true "${config.home.homeDirectory}/.local/state/amane/niri-cursor.kdl"
     include optional=true "${config.home.homeDirectory}/.local/state/amane/niri-focus-mode.kdl"
   '';
 }

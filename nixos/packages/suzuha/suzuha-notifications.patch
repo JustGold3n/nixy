@@ -1,0 +1,182 @@
+--- a/src/services/notifications/notification.rs
++++ b/src/services/notifications/notification.rs
+@@ -23,6 +23,9 @@
+ 
+     // stays open after an action, until it is dismissed or the sender closes it
+     pub(crate) resident: bool,
++
++    // discarded when its popup finishes, instead of remaining in history
++    pub(crate) transient: bool,
+ 
+     pub(crate) received: SystemTime,
+ }
+@@ -76,6 +79,10 @@
+         &self.image
+     }
+ 
++    pub fn transient(&self) -> bool {
++        self.transient
++    }
++
+     pub fn urgency(&self) -> Urgency {
+         self.urgency
+     }
+--- a/src/services/notifications/server.rs
++++ b/src/services/notifications/server.rs
+@@ -77,6 +77,7 @@
+         has_default,
+ 
+         resident: hints.get("resident").bool(),
++        transient: hints.get("transient").bool(),
+ 
+         received: SystemTime::now(),
+     };
+--- a/src/services/notifications.rs
++++ b/src/services/notifications.rs
+@@ -18,6 +18,8 @@
+ // the numbers the spec gives each way a notification can close
+ #[derive(Clone, Copy)]
+ pub enum Reason {
++    Expired = 1,
++
+     Dismissed = 2,
+ 
+     // the sender asked with CloseNotification
+@@ -51,6 +53,10 @@
+     // false when another daemon like mako or dunst already owns the name
+     pub fn running(&self) -> bool {
+         self.running
++    }
++
++    pub fn expire(id: u32) {
++        Self::write().close(id, Reason::Expired);
+     }
+ 
+     pub fn dismiss(id: u32) {
+--- a/cli/template/example/suzuha/overlay/popups.rs
++++ b/cli/template/example/suzuha/overlay/popups.rs
+@@ -135,7 +135,7 @@
+         }
+     }
+ 
+-    fn update(&mut self, overlay: &Overlay, listed: &[u32]) {
++    fn update(&mut self, overlay: &Overlay, listed: &[u32]) -> Vec<u32> {
+         let now = Instant::now();
+ 
+         let elapsed = now - self.last_frame;
+@@ -168,7 +168,14 @@
+             amane::request_frame();
+         }
+ 
+-        self.list.retain(|popup| !popup.leaving || popup.slide.value() < 1.0);
++        let mut finished = Vec::new();
++        self.list.retain(|popup| {
++            let hidden = popup.leaving && popup.slide.value() >= 1.0;
++            if hidden {
++                finished.push(popup.id);
++            }
++            !hidden
++        });
+ 
+         // nothing pops up while the panel with every notification is open
+         for id in listed {
+@@ -186,6 +193,8 @@
+         } else if !wanted && self.panel.shown {
+             self.panel.hide();
+         }
++
++        finished
+     }
+ 
+     // none while fully hidden
+@@ -327,11 +336,26 @@
+         listed.push(notification.id());
+     }
+ 
+-    POPUPS.with_borrow_mut(|popups| {
+-        popups.update(overlay, &listed);
+-
+-        popups.view(overlay, theme, &notifications, screen)
+-    })
++    let (view, finished) = POPUPS.with_borrow_mut(|popups| {
++        let finished = popups.update(overlay, &listed);
++        let transient: Vec<u32> = finished.into_iter().filter(|id| {
++            find(&notifications, *id).is_some_and(Notification::transient)
++        }).collect();
++
++        (popups.view(overlay, theme, &notifications, screen), transient)
++    });
++
++    // Release the read lock before closing notifications and updating the bar/list.
++    drop(notifications);
++    for id in finished {
++        if overlay.closed_popups.contains(&id) {
++            Notifications::dismiss(id);
++        } else {
++            Notifications::expire(id);
++        }
++    }
++
++    view
+ }
+ 
+ fn find(notifications: &Notifications, id: u32) -> Option<&Notification> {
+@@ -385,3 +409,58 @@
+         .fill(theme.accent)
+         .translate(COUNTDOWN_INSET, card_height - COUNTDOWN_BOTTOM - COUNTDOWN_HEIGHT)
+ }
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    #[test]
++    fn hovering_pauses_expiration() {
++        let mut overlay = Overlay::new();
++        let mut popups = Popups::new();
++        popups.update(&overlay, &[1]);
++        popups.list[0].slide = motion::spatial(0.0, 0);
++        overlay.hovered_popup = Some(1);
++        popups.last_frame = Instant::now() - TIMEOUT * 2;
++        assert!(popups.update(&overlay, &[1]).is_empty());
++        assert_eq!(popups.list[0].left, TIMEOUT);
++        assert!(!popups.list[0].leaving);
++
++        overlay.hovered_popup = None;
++        popups.last_frame = Instant::now() - TIMEOUT * 2;
++        popups.update(&overlay, &[1]);
++        assert!(popups.list[0].leaving);
++    }
++
++    #[test]
++    fn expiration_waits_for_exit_animation_and_is_reported_once() {
++        let overlay = Overlay::new();
++        let mut popups = Popups::new();
++        popups.update(&overlay, &[1]);
++        popups.list[0].leaving = true;
++        popups.list[0].slide = motion::spatial(0.5, 0);
++        assert!(popups.update(&overlay, &[1]).is_empty());
++
++        popups.list[0].slide = motion::spatial(1.0, 0);
++        assert_eq!(popups.update(&overlay, &[1]), vec![1]);
++        assert!(popups.list.is_empty());
++        assert!(popups.update(&overlay, &[1]).is_empty());
++    }
++
++    #[test]
++    fn manual_close_leaves_early_and_sender_close_does_not_expire_again() {
++        let mut overlay = Overlay::new();
++        let mut popups = Popups::new();
++        popups.update(&overlay, &[1, 2]);
++        popups.list[0].slide = motion::spatial(0.0, 0);
++        overlay.closed_popups.push(1);
++        popups.update(&overlay, &[1, 2]);
++        assert!(popups.list[0].leaving);
++        assert!(!popups.list[1].leaving);
++
++        popups.list[0].slide = motion::spatial(1.0, 0);
++        assert_eq!(popups.update(&overlay, &[1, 2]), vec![1]);
++        assert!(popups.update(&overlay, &[]).is_empty());
++        assert!(popups.list.is_empty());
++    }
++}

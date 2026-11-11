@@ -1,0 +1,78 @@
+--- a/src/services/apps/icons.rs
++++ b/src/services/apps/icons.rs
+@@ -25,15 +25,7 @@
+     }
+ 
+     for theme in &themes {
+-        for root in &roots {
+-            let theme_icon_folders = read_theme_icon_folders(&root.join(theme));
+-
+-            if theme_icon_folders.is_empty() {
+-                continue;
+-            }
+-
+-            icon_folders.push(theme_icon_folders)
+-        }
++        icon_folders.extend(read_theme_icon_folders(theme, &roots));
+     }
+ 
+     // loose icons that belong to no theme
+@@ -173,8 +165,13 @@
+     Some(String::from(theme))
+ }
+ 
+-fn read_index_theme(theme: &Path) -> String {
+-    fs::read_to_string(theme.join("index.theme")).unwrap_or_default()
++fn read_index_theme(theme: &str, roots: &[PathBuf]) -> String {
++    // A theme can span multiple roots. Steam installs icons in the user's
++    // hicolor directory without an index, relying on the system's index.theme.
++    roots
++        .iter()
++        .find_map(|root| fs::read_to_string(root.join(theme).join("index.theme")).ok())
++        .unwrap_or_default()
+ }
+ 
+ fn parse_icon_folder_names(index_theme: &str) -> Vec<&str> {
+@@ -204,16 +201,25 @@
+     icon_folder_names
+ }
+ 
+-fn read_theme_icon_folders(theme: &Path) -> Vec<PathBuf> {
+-    let index_theme = read_index_theme(theme);
+-
+-    let mut theme_icon_folders = Vec::new();
+-
+-    for icon_folder_name in parse_icon_folder_names(&index_theme) {
+-        theme_icon_folders.push(theme.join(icon_folder_name));
+-    }
+-
+-    theme_icon_folders
++fn read_theme_icon_folders(theme: &str, roots: &[PathBuf]) -> Vec<Vec<PathBuf>> {
++    let index_theme = read_index_theme(theme, roots);
++    let names = parse_icon_folder_names(&index_theme);
++
++    if names.is_empty() {
++        return Vec::new();
++    }
++
++    // Keep user roots ahead of system roots, using the same directory list
++    // everywhere, including roots that contain icons but no theme index.
++    roots
++        .iter()
++        .map(|root| {
++            names
++                .iter()
++                .map(|name| root.join(theme).join(name))
++                .collect()
++        })
++        .collect()
+ }
+ 
+ fn look_up_icon_file_in_folder(icon_name: &str, icon_folder: &Path) -> Option<PathBuf> {
+@@ -262,3 +268,6 @@
+ 
+     None
+ }
++
++#[cfg(test)]
++mod tests;

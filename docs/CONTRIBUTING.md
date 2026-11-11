@@ -52,3 +52,42 @@ Enter `nix develop` to install the Git hooks, including Alejandra for Nix files.
 For README changes, run `pre-commit run --files README.md` in that shell to refresh
 the generated table of contents and command output. Review the diff before
 committing.
+
+## Rust tools
+
+Local desktop services, battery controls, and the `inject-exec` README hook are
+compiled together as `nixy-tools`. Their sources stay beside the modules that
+use them; the root `Cargo.toml` declares the binaries. Nix builds them with the
+committed `Cargo.lock` and runs their unit tests. Systemd services, Home Manager
+activation, and the README hook use the compiled binaries directly.
+
+```sh
+nix build .#nixy-tools
+./result/bin/niri-tools shortcuts --list
+./result/bin/niri-tools actions --list
+./result/bin/battery-charge care
+./result/bin/battery-charge full
+```
+
+`battery-charge` opens a local BIOS password dialog when needed. Full charging
+requires the charger to be connected. The firmware helper accepts the password
+only on standard input; use `battery-charge` for interactive changes.
+
+Inside `nix develop`, run the Rust checks with:
+
+```sh
+cargo fmt --all --check
+cargo clippy --locked --all-targets -- -D warnings
+cargo test --locked
+```
+
+`nix flake check` also runs the standalone Nixy argument tests, the offscreen Loaf
+chooser tests, and the portal tests in an isolated D-Bus session. To run those
+against individual binaries during development:
+
+```sh
+cargo run --locked --bin test-nixy -- /path/to/nixy
+cargo run --locked --bin test-loaf-chooser -- /path/to/loaf
+dbus-run-session -- cargo run --locked --bin test-termfilechooser -- \
+  --backend /path/to/xdg-desktop-portal-termfilechooser
+```

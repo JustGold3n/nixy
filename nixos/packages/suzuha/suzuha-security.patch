@@ -1,0 +1,275 @@
+--- a/cli/template/example/suzuha/overlay/launcher/results.rs
++++ b/cli/template/example/suzuha/overlay/launcher/results.rs
+@@ -1,4 +1,6 @@
+ use std::env;
++use std::process::Command;
++use std::thread;
+
+ use amane::{Apps, Service};
+
+@@ -176,7 +178,40 @@
+         return false;
+     };
+
+-    amane::spawn(&format!("{terminal} -- tmux attach-session -t '{session}'"));
+-
++    let Ok(mut child) = attach_command(&terminal, session).spawn() else {
++        return false;
++    };
++    thread::spawn(move || { let _ = child.wait(); });
+     true
+ }
++
++
++fn attach_command(terminal: &str, session: &str) -> Command {
++    let mut command = Command::new(terminal);
++    command.args(["--", "tmux", "attach-session", "-t", session]);
++    command
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    use std::fs;
++    use std::os::unix::fs::PermissionsExt;
++
++    #[test]
++    fn session_names_are_literal_arguments_not_shell_programs() {
++        let root = std::env::temp_dir().join(format!("suzuha-tmux-test-{}", std::process::id()));
++        fs::create_dir(&root).unwrap();
++        let terminal = root.join("terminal with spaces");
++        fs::write(&terminal, "#!@sh@\nprintf '%s\\n' \"$@\"\n").unwrap();
++        fs::set_permissions(&terminal, fs::Permissions::from_mode(0o700)).unwrap();
++        let session = "session'; touch INJECTION_MARKER; # $(touch INJECTION_MARKER) `touch INJECTION_MARKER`";
++        let output = attach_command(terminal.to_str().unwrap(), session)
++            .current_dir(&root).output().unwrap();
++        assert!(output.status.success());
++        assert_eq!(String::from_utf8(output.stdout).unwrap(),
++                   format!("--\ntmux\nattach-session\n-t\n{session}\n"));
++        assert!(!root.join("INJECTION_MARKER").exists());
++        fs::remove_dir_all(root).unwrap();
++    }
++}
+--- a/cli/template/example/suzuha/converter/job.rs
++++ b/cli/template/example/suzuha/converter/job.rs
+@@ -1,9 +1,11 @@
+-use std::env;
++mod private_dir;
++
++use private_dir::{PrivateDir, file_uri};
+ use std::fs;
+ use std::io::{BufRead, BufReader};
+ use std::os::unix::process::CommandExt;
+ use std::path::{Path, PathBuf};
+-use std::process::{self, Command, Stdio};
++use std::process::{Command, Stdio};
+ use std::thread;
+ use std::time::{Duration, Instant};
+
+@@ -100,6 +102,10 @@
+ }
+
+ fn ffmpeg(input: &Path, arguments: &[&str], output: &Path) -> Status {
++    let Some(folder) = output.parent() else { return Status::Failed; };
++    let Ok(scratch) = PrivateDir::new_in(folder) else { return Status::Failed; };
++    let Some(name) = output.file_name() else { return Status::Failed; };
++    let pending = scratch.path().join(name);
+     let duration = duration(input);
+
+     // arguments are passed straight to ffmpeg, so file names need no quoting
+@@ -107,7 +113,7 @@
+         .args(["-hide_banner", "-loglevel", "error", "-nostdin", "-nostats", "-progress", "pipe:1", "-n", "-i"])
+         .arg(input)
+         .args(arguments)
+-        .arg(output)
++        .arg(&pending)
+         .stdout(Stdio::piped())
+         .stderr(Stdio::null())
+         .spawn();
+@@ -139,14 +145,13 @@
+
+     let finished = child.wait();
+
+-    if finished.is_ok_and(|status| status.success()) {
+-        return Status::Done;
+-    }
+-
+-    // the name was free before, so whatever is there is ffmpeg's half-written file
+-    let _ = fs::remove_file(output);
+-
+-    Status::Failed
++    // Publish atomically without replacing a file created while converting.
++    // The private workspace is on the same filesystem and is removed on return.
++    if finished.is_ok_and(|status| status.success()) && fs::hard_link(&pending, output).is_ok() {
++        Status::Done
++    } else {
++        Status::Failed
++    }
+ }
+
+ // in seconds, none for a still image or anything ffprobe can't time
+@@ -189,27 +194,20 @@
+         return Status::Failed;
+     };
+
+-    let scratch = folder.join(format!(".amane-converting-{}", process::id()));
+-
+-    if fs::create_dir_all(&scratch).is_err() {
+-        return Status::Failed;
+-    }
+-
+-    let status = soffice(input, document, &scratch);
+-
+-    let _ = fs::remove_dir_all(&scratch);
+-
+-    status
++    let Ok(scratch) = PrivateDir::new_in(folder) else {
++        return Status::Failed;
++    };
++    soffice(input, document, scratch.path())
+ }
+
+ fn soffice(input: &Path, document: &Document, scratch: &Path) -> Status {
+     // a profile of its own, so an open libreoffice window doesn't take the job over
+-    let profile = env::temp_dir().join("amane-libreoffice");
++    let profile = scratch.join("profile");
+
+     let mut command = Command::new("soffice");
+
+     command
+-        .arg(format!("-env:UserInstallation=file://{}", profile.display()))
++        .arg(format!("-env:UserInstallation={}", file_uri(&profile)))
+         .args(["--headless", "--norestore"]);
+
+     let from_pdf = input.extension().is_some_and(|extension| extension.eq_ignore_ascii_case("pdf"));
+@@ -260,7 +258,7 @@
+
+     let output = free_path(input, "", document.extension);
+
+-    if fs::rename(&written, &output).is_err() {
++    if fs::hard_link(&written, &output).is_err() {
+         return Status::Failed;
+     }
+
+--- a/cli/template/example/suzuha/overlay/control_center/art.rs
++++ b/cli/template/example/suzuha/overlay/control_center/art.rs
+@@ -1,6 +1,10 @@
+ use std::cell::RefCell;
+ use std::collections::HashSet;
+-use std::env;
++use std::{env, fs, thread};
++use std::process::Command;
++use std::sync::atomic::{AtomicUsize, Ordering};
++
++static ACTIVE: AtomicUsize = AtomicUsize::new(0);
+ use std::hash::{DefaultHasher, Hash, Hasher};
+ use std::path::{Path, PathBuf};
+
+@@ -25,10 +29,10 @@
+         return local.exists().then_some(local);
+     }
+
+-    // any player can set the link, and it goes into a shell command inside single quotes
++    // Only fetch web URLs; pass them literally as a single argument to curl.
+     let web = url.starts_with("https://") || url.starts_with("http://");
+
+-    if !web || url.contains('\'') {
++    if !web {
+         return None;
+     }
+
+@@ -55,18 +59,85 @@
+
+ // written under a temporary name and moved in once complete, so a half file is never read
+ fn download(url: &str, cached: &Path) {
+-    let first_time = STARTED.with_borrow_mut(|started| started.insert(String::from(url)));
+-
+-    if !first_time {
++    if STARTED.with_borrow(|started| started.contains(url)) {
+         return;
+     }
++    // A player can supply new links faster than the network can fetch them.
++    if ACTIVE.try_update(Ordering::AcqRel, Ordering::Acquire, |n| {
++        (n < 4).then_some(n + 1)
++    }).is_err() {
++        return;
++    }
++    STARTED.with_borrow_mut(|started| started.insert(String::from(url)));
++    let url = url.to_owned();
++    let cached = cached.to_owned();
++    thread::spawn(move || {
++        let partial = cached.with_extension("part");
++        if let Some(folder) = cached.parent() {
++            if fs::create_dir_all(folder).is_ok() {
++                let result = download_command(&url, &partial).status();
++                if result.is_ok_and(|status| status.success()) {
++                    let _ = fs::rename(&partial, &cached);
++                }
++            }
++        }
++        let _ = fs::remove_file(&partial);
++        ACTIVE.fetch_sub(1, Ordering::Release);
++    });
++}
+
+-    let file = cached.display();
++fn download_command(url: &str, output: &Path) -> Command {
++    let mut command = Command::new("@curl@");
++    // Disable curlrc first, bound each transfer, and prohibit protocol changes
++    // on redirects. URL globbing must not turn one cover into many requests.
++    command.args([
++        "--disable", "--fail", "--silent", "--location", "--globoff",
++        "--proto", "=http,https", "--proto-redir", "=http,https",
++        "--connect-timeout", "5", "--max-time", "20",
++        "--max-filesize", "8388608", "--max-redirs", "3", "--output",
++    ]).arg(output).arg("--").arg(url);
++    command
++}
+
+-    let folder = cached.parent().expect("failed to find the art folder").display();
++#[cfg(test)]
++mod tests {
++    use super::*;
++    use std::io::{Read, Write};
++    use std::net::TcpListener;
+
+-    // ponytail: the cache is never cleaned, prune it if it grows
+-    amane::spawn(&format!(
+-        "mkdir -p '{folder}' && curl -sfL -o '{file}.part' '{url}' && mv '{file}.part' '{file}'"
+-    ));
++    fn response(header: &str) -> String {
++        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
++        let address = listener.local_addr().unwrap();
++        let header = header.to_owned();
++        thread::spawn(move || {
++            let (mut stream, _) = listener.accept().unwrap();
++            stream.set_read_timeout(Some(std::time::Duration::from_secs(5))).unwrap();
++            let mut request = [0; 4096];
++            let _ = stream.read(&mut request);
++            let _ = stream.write_all(header.as_bytes());
++        });
++        format!("http://{address}/cover")
++    }
++
++    #[test]
++    fn rejects_oversized_downloads_and_non_http_redirects() {
++        for header in [
++            "HTTP/1.1 200 OK\r\nContent-Length: 8388609\r\nConnection: close\r\n\r\n",
++            "HTTP/1.1 302 Found\r\nLocation: file:///etc/passwd\r\nContent-Length: 0\r\n\r\n",
++        ] {
++            let url = response(header);
++            let status = download_command(&url, Path::new("/dev/null"))
++                .env("no_proxy", "*").env("NO_PROXY", "*").status().unwrap();
++            assert!(!status.success());
++        }
++    }
++
++    #[test]
++    fn metacharacters_are_one_url_and_successful_covers_still_download() {
++        let url = response("HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\nok");
++        let mut command = download_command(&format!("{url}?q='$(id)`id`{{a,b}}"), Path::new("/dev/null"));
++        // -- ends curl options, so configure test-only proxy handling through env.
++        command.env("no_proxy", "*").env("NO_PROXY", "*");
++        assert!(command.status().unwrap().success());
++    }
+ }

@@ -7,6 +7,9 @@
     enable = true;
     useNautilus = false;
   };
+  # Suzuha owns terminal palettes. Disable the system-wide Base16 Fish hook
+  # as well as the Home Manager target: either hook resets new terminals.
+  stylix.targets.fish.enable = false;
   environment.systemPackages = [pkgs.xwayland-satellite];
   environment.variables = {
     NIXOS_OZONE_WL = "1";

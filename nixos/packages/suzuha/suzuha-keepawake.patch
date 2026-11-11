@@ -1,0 +1,64 @@
+--- a/cli/template/example/suzuha/overlay/launcher/results.rs
++++ b/cli/template/example/suzuha/overlay/launcher/results.rs
+@@ -15,6 +15,9 @@
+     // opens the settings window, on its colors page for the color command
+     Settings,
+     Colors,
++
++    // toggles the session idle timers
++    KeepAwake,
+ 
+     // opens the wallpaper picker
+     Wallpapers,
+@@ -105,6 +108,7 @@
+     let all = [
+         ("Settings", "\u{f0493}", "command_settings", Kind::Settings),
+         ("Color scheme", "\u{f03d8}", "command_colors", Kind::Colors),
++        ("Keep Awake", "\u{f00f4}", "command_keepawake", Kind::KeepAwake),
+         ("Tmux sessions", "\u{f018d}", "command_tmux", Kind::TmuxCommand),
+         ("Wallpapers", "\u{f02e9}", "command_wallpapers", Kind::Wallpapers),
+         ("Converter", "\u{f04e1}", "command_converter", Kind::Converter),
+--- a/cli/template/example/suzuha/overlay/launcher.rs
++++ b/cli/template/example/suzuha/overlay/launcher.rs
+@@ -536,6 +536,12 @@
+             crate::settings::open_on(crate::settings::Page::Colors);
+         }
+ 
++        Kind::KeepAwake => {
++            overlay.launcher.hide();
++
++            amane::spawn("@keepawake@ toggle");
++        }
++
+         Kind::Wallpapers => {
+             overlay.launcher.hide();
+ 
+--- a/cli/template/example/suzuha/settings/store.rs
++++ b/cli/template/example/suzuha/settings/store.rs
+@@ -6,7 +6,7 @@
+ use amane::Service;
+ 
+ // every setting and the value it has until changed
+-const DEFAULTS: [(&str, &str); 71] = [
++const DEFAULTS: [(&str, &str); 72] = [
+     // appearance
+     ("blur_strength", "1"),
+     ("reduce_transparency", "false"),
+@@ -43,6 +43,7 @@
+     ("launcher_commands", "true"),
+     ("command_settings", "true"),
+     ("command_colors", "true"),
++    ("command_keepawake", "true"),
+     ("command_tmux", "true"),
+     ("command_wallpapers", "true"),
+     ("command_converter", "true"),
+--- a/cli/template/example/suzuha/settings/pages/launcher.rs
++++ b/cli/template/example/suzuha/settings/pages/launcher.rs
+@@ -50,6 +50,7 @@
+     switch::add(page, "launcher_commands", "Command mode", "Enable the > command palette prefix");
+     switch::add(page, "command_settings", "Settings command", "Show Settings in command mode");
+     switch::add(page, "command_colors", "Color scheme command", "Show Color scheme in command mode");
++    switch::add(page, "command_keepawake", "Keep Awake command", "Show Keep Awake in command mode");
+     switch::add(page, "command_tmux", "Tmux command", "Show Tmux sessions in command mode");
+     switch::add(page, "command_wallpapers", "Wallpaper command", "Show Wallpapers in command mode");
+     switch::add(page, "command_converter", "Converter command", "Show Converter in command mode");

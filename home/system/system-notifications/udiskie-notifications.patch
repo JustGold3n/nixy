@@ -1,0 +1,10 @@
+--- a/udiskie/notify.py
++++ b/udiskie/notify.py
+@@ -191,6 +191,7 @@
+         :param actions: each item is a tuple with parameters for _add_action
+         """
+         notification = self._notify(summary, message, icon)
++        notification.set_hint('transient', GLib.Variant('b', True))
+         timeout = self._get_timeout(event)
+         if timeout != -1:
+             notification.set_timeout(int(timeout * 1000))

@@ -1,11 +1,9 @@
 # starship is a minimal, fast, and extremely customizable prompt for any shell!
-{
-  config,
-  lib,
-  ...
-}: let
-  accent = "#${config.lib.stylix.colors.base0D}";
-  background-alt = "#${config.lib.stylix.colors.base01}";
+{lib, ...}: let
+  # Suzuha updates these ANSI slots from the wallpaper palette, including in
+  # running terminals. Truecolor literals would bypass those live updates.
+  accent = "bright-blue";
+  background-alt = "black";
 in {
   programs.starship = {
     enable = true;
@@ -23,6 +21,7 @@ in {
       directory = {
         style = accent;
       };
+      hostname.style = accent;
 
       character = {
         success_symbol = "[❯](${accent})";
@@ -43,7 +42,7 @@ in {
       };
 
       git_status = {
-        format = "[[(*$conflicted$untracked$modified$staged$renamed$deleted)](218)($ahead_behind$stashed)]($style)";
+        format = "[[(*$conflicted$untracked$modified$staged$renamed$deleted)](bright-magenta)($ahead_behind$stashed)]($style)";
         style = "cyan";
         conflicted = "";
         renamed = "";
@@ -53,7 +52,7 @@ in {
 
       git_state = {
         format = "([$state( $progress_current/$progress_total)]($style)) ";
-        style = "bright-black";
+        style = "#ffffff";
       };
     };
   };

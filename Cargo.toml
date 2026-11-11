@@ -1,0 +1,61 @@
+[package]
+name = "nixy-tools"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[lib]
+path = "rust/lib.rs"
+
+[dependencies]
+dbus = { version = "0.9", features = ["vendored"] }
+libc = "0.2"
+regex = "1"
+serde_json = "1"
+sha2 = "0.10"
+signal-hook = "0.3"
+tempfile = "3"
+
+[[bin]]
+name = "niri-tools"
+path = "home/system/niri/tools.rs"
+
+[[bin]]
+name = "system-notifications"
+path = "home/system/system-notifications/watch.rs"
+
+[[bin]]
+name = "wallpaper-cursor"
+path = "home/system/wallpaper-cursor/cursor.rs"
+
+[[bin]]
+name = "battery-charge-firmware"
+path = "nixos/battery-care/firmware.rs"
+
+[[bin]]
+name = "battery-charge"
+path = "nixos/battery-care/ui.rs"
+
+[[bin]]
+name = "battery-care-watch"
+path = "nixos/battery-care/watch.rs"
+
+[[bin]]
+name = "suzuha-enable-integrations"
+path = "home/system/suzuha-enable-integrations.rs"
+
+[[bin]]
+name = "inject-exec"
+path = ".github/scripts/inject-exec.rs"
+
+[[bin]]
+name = "test-nixy"
+path = "home/tui/nixy/test-nixy.rs"
+
+[[bin]]
+name = "test-loaf-chooser"
+path = "nixos/packages/loaf/test-chooser.rs"
+
+[[bin]]
+name = "test-termfilechooser"
+path = "nixos/packages/termfilechooser/test-termfilechooser.rs"

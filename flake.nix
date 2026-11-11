@@ -12,7 +12,9 @@
       inputs.nixpkgs.follows = "nixpkgs-unstable";
     };
     suzuha = {
-      url = "github:MystiaFin/suzuha";
+      # Keep compatible with Amane 544cbfc and the local patches. Newer Suzuha
+      # requires per-app audio APIs that upstream Amane does not yet provide.
+      url = "github:MystiaFin/suzuha/69f4f9c3aee484959528b5178c92a3d80d17e3da";
       flake = false;
     };
     nixos-hardware.url = "github:NixOS/nixos-hardware";
@@ -65,7 +67,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     loaf = {
-      url = "github:m-uvex/loaf-fm/dev";
+      url = "github:m-uvex/loaf-fm/v0.2.0";
       inputs.nixpkgs.follows = "nixpkgs-unstable";
     };
     default-creds = {
@@ -116,7 +118,33 @@
         formatter.${system} = pkgs.alejandra;
         packages.${system} = {
           nvim = inputs.nvf-config.packages.${system}.nvim;
+          nixy-tools = pkgs.callPackage ./nixos/packages/nixy-tools {};
           suzuha = pkgs-unstable.callPackage ./nixos/packages/suzuha {inherit inputs;};
+        };
+        checks.${system} = let
+          tools = pkgs.callPackage ./nixos/packages/nixy-tools {};
+          nixy = import ./home/tui/nixy/package.nix {
+            inherit pkgs;
+            configDirectory = "$HOME/.config/nixos";
+          };
+        in {
+          rust-tools = tools;
+          nixy-arguments = pkgs.runCommand "nixy-arguments" {nativeBuildInputs = [pkgs.git];} ''
+            ${tools}/bin/test-nixy ${nixy}/bin/nixy
+            touch $out
+          '';
+          termfilechooser =
+            pkgs.runCommand "termfilechooser-regressions" {
+              nativeBuildInputs = [pkgs.dbus pkgs.glib];
+            } ''
+              dbus-run-session --config-file=${pkgs.dbus}/share/dbus-1/session.conf -- ${tools}/bin/test-termfilechooser \
+                --backend ${pkgs.callPackage ./nixos/packages/termfilechooser {}}/libexec/xdg-desktop-portal-termfilechooser
+              touch $out
+            '';
+          loaf-chooser = pkgs.runCommand "loaf-chooser-regressions" {} ''
+            ${tools}/bin/test-loaf-chooser ${import ./nixos/packages/loaf {inherit inputs pkgs;}}/bin/loaf
+            touch $out
+          '';
         };
         apps.${system}.nvim = inputs.nvf-config.apps.${system}.nvim;
         nixosConfigurations = {

@@ -6,11 +6,11 @@
 }: let
   glass = (pkgs.formats.ini {}).generate "foot-glass.ini" {
     colors-dark = {
-      alpha = 0.92;
+      alpha = 0.68;
       blur = true;
     };
     colors-light = {
-      alpha = 0.92;
+      alpha = 0.68;
       blur = true;
     };
   };
